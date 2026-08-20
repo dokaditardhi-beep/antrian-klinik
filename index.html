@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Antrean Klinik - UMUM & BPJS</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            200: '#bae6fd',
+                            300: '#7dd3fc',
+                            400: '#38bdf8',
+                            500: '#0ea5e9',
+                            600: '#0284c7',
+                            700: '#0369a1',
+                            800: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Print ticket styling rules */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #print-ticket-area, #print-ticket-area * {
+                visibility: visible;
+            }
+            #print-ticket-area {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                max-width: 80mm;
+                margin: 0;
+                padding: 10px;
+                box-sizing: border-box;
+                font-family: monospace;
+                color: black;
+                background: white;
+            }
+        }
+        
+        /* Custom scrollbar for clean UI */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-brand-50 min-h-screen text-slate-800 flex flex-col font-sans">
+
+    <!-- APP HEADER & NAVIGATION -->
+    <header class="bg-white border-b border-brand-100 shadow-sm sticky top-0 z-50 no-print">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <!-- Logo & Brand -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('dashboard')">
+                    <div class="bg-brand-500 text-white p-2 rounded-xl shadow-md shadow-brand-500/25">
+                        <!-- Cross / Health Icon -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 10.5V20a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-9.5M12 4v16m8-8H4" />
+                        </svg>
+                    </div>
+                    <div>
+                        <h1 class="font-extrabold text-brand-900 tracking-tight text-lg leading-tight" id="header-clinic-name">KLINIK SEHAT UTAMA</h1>
+                        <span class="text-xs text-brand-500 font-medium tracking-wide">SISTEM ANTREAN DIGITAL</span>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl">
+                    <button onclick="switchView('dashboard')" id="tab-dashboard" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-brand-700 bg-white shadow-sm">
+                        Beranda
+                    </button>
+                    <button onclick="switchView('kiosk')" id="tab-kiosk" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                        Kiosk Tiket
+                    </button>
+                    <button onclick="switchView('operator')" id="tab-operator" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                        Operator Panggil
+                    </button>
+                    <button onclick="switchView('monitor')" id="tab-monitor" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                        Layar Monitor
+                    </button>
+                    <button onclick="switchView('settings')" id="tab-settings" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                        Pengaturan
+                    </button>
+                </nav>
+
+                <!-- Mobile Menu Selector -->
+                <div class="md:hidden">
+                    <select id="mobile-nav" onchange="switchView(this.value)" class="bg-slate-100 text-sm font-semibold rounded-lg border-none px-3 py-2 text-brand-900 focus:ring-2 focus:ring-brand-500">
+                        <option value="dashboard">Beranda</option>
+                        <option value="kiosk">Kiosk Tiket</option>
+                        <option value="operator">Operator Panggil</option>
+                        <option value="monitor">Layar Monitor</option>
+                        <option value="settings">Pengaturan</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- MAIN APP CONTENT -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 no-print">
+
+        <!-- 1. DASHBOARD VIEW (OVERVIEW) -->
+        <section id="view-dashboard" class="space-y-6">
+            <!-- Greeting & Quick Stats -->
+            <div class="bg-gradient-to-r from-brand-600 to-indigo-600 rounded-2xl p-6 md:p-8 text-white shadow-xl shadow-brand-600/15 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 class="text-2xl md:text-3xl font-bold">Selamat Datang di Portal Antrean</h2>
+                    <p class="text-brand-100 mt-2 max-w-xl text-sm md:text-base">Gunakan menu di atas untuk mengoperasikan sistem antrean. Anda dapat menggunakan beberapa tab atau perangkat secara bersamaan untuk Kiosk Tiket, Layar Monitor, dan Layar Panggil.</p>
+                </div>
+                <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 flex gap-4 self-stretch md:self-auto justify-around">
+                    <div class="text-center px-2">
+                        <span class="block text-2xl font-bold" id="dash-stat-total">0</span>
+                        <span class="text-xs text-brand-100 font-medium">Total Antrean</span>
+                    </div>
+                    <div class="border-l border-white/20"></div>
+                    <div class="text-center px-2">
+                        <span class="block text-2xl font-bold" id="dash-stat-waiting">0</span>
+                        <span class="text-xs text-brand-100 font-medium">Menunggu</span>
+                    </div>
+                    <div class="border-l border-white/20"></div>
+                    <div class="text-center px-2">
+                        <span class="block text-2xl font-bold text-emerald-300" id="dash-stat-completed">0</span>
+                        <span class="text-xs text-brand-100 font-medium">Selesai</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Live Status & Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- UMUM Card -->
+                <div class="bg-white border border-brand-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="bg-emerald-50 border-b border-emerald-100 p-6 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs font-bold text-emerald-700 tracking-wider uppercase bg-emerald-100 px-2.5 py-1 rounded-full">KATEGORI UMUM (A)</span>
+                            <h3 class="text-xl font-bold text-emerald-900 mt-2">Pasien Umum</h3>
+                        </div>
+                        <div class="text-emerald-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col justify-between">
+                        <div class="grid grid-cols-2 gap-4 text-center my-4">
+                            <div class="bg-slate-50 p-4 rounded-xl">
+                                <span class="text-xs text-slate-500 block font-medium mb-1">Tiket Terakhir</span>
+                                <span class="text-3xl font-extrabold text-slate-800" id="dash-umum-last">A-000</span>
+                            </div>
+                            <div class="bg-brand-50 p-4 rounded-xl">
+                                <span class="text-xs text-brand-600 block font-medium mb-1">Sedang Dipanggil</span>
+                                <span class="text-3xl font-extrabold text-brand-700" id="dash-umum-current">A-000</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-sm text-slate-500 pt-4 border-t border-slate-100">
+                            <span>Sisa Antrean: <strong class="text-brand-600" id="dash-umum-remaining">0 orang</strong></span>
+                            <button onclick="switchView('kiosk')" class="text-emerald-600 hover:text-emerald-700 font-semibold flex items-center gap-1">
+                                Ambil Tiket
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- BPJS Card -->
+                <div class="bg-white border border-brand-100 rounded-2xl shadow-sm overflow-hidden flex flex-col">
+                    <div class="bg-brand-50 border-b border-brand-100 p-6 flex justify-between items-center">
+                        <div>
+                            <span class="text-xs font-bold text-brand-700 tracking-wider uppercase bg-brand-100 px-2.5 py-1 rounded-full">KATEGORI BPJS (B)</span>
+                            <h3 class="text-xl font-bold text-brand-900 mt-2">Pasien BPJS</h3>
+                        </div>
+                        <div class="text-brand-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                            </svg>
+                        </div>
+                    </div>
+                    <div class="p-6 flex-grow flex flex-col justify-between">
+                        <div class="grid grid-cols-2 gap-4 text-center my-4">
+                            <div class="bg-slate-50 p-4 rounded-xl">
+                                <span class="text-xs text-slate-500 block font-medium mb-1">Tiket Terakhir</span>
+                                <span class="text-3xl font-extrabold text-slate-800" id="dash-bpjs-last">B-000</span>
+                            </div>
+                            <div class="bg-brand-50 p-4 rounded-xl">
+                                <span class="text-xs text-brand-600 block font-medium mb-1">Sedang Dipanggil</span>
+                                <span class="text-3xl font-extrabold text-brand-700" id="dash-bpjs-current">B-000</span>
+                            </div>
+                        </div>
+                        <div class="flex justify-between items-center text-sm text-slate-500 pt-4 border-t border-slate-100">
+                            <span>Sisa Antrean: <strong class="text-brand-600" id="dash-bpjs-remaining">0 orang</strong></span>
+                            <button onclick="switchView('kiosk')" class="text-brand-600 hover:text-brand-700 font-semibold flex items-center gap-1">
+                                Ambil Tiket
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Guidelines -->
+            <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
+                <h3 class="text-lg font-bold text-brand-900 mb-4 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Cara Menggunakan Sistem Antrean Multi-Layar
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm text-slate-600">
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div class="font-bold text-brand-800 mb-1">1. Cetak Tiket (Layar Kiosk)</div>
+                        Buka tab / perangkat baru dan pilih menu <strong class="text-brand-600">Kiosk Tiket</strong>. Letakkan di depan pintu masuk. Pasien dapat menekan tombol untuk mencetak tiket antrean mereka.
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div class="font-bold text-brand-800 mb-1">2. Panggil Antrean (Layar Operator)</div>
+                        Operator loket membuka menu <strong class="text-brand-600">Operator Panggil</strong> di PC masing-masing, memilih nomor Loket, lalu memanggil nomor antrean secara bergantian.
+                    </div>
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <div class="font-bold text-brand-800 mb-1">3. Display Utama (Layar Monitor)</div>
+                        Buka menu <strong class="text-brand-600">Layar Monitor</strong> di Smart TV atau PC ruang tunggu. Setiap operator memanggil antrean, layar ini akan membunyikan bel, menampilkan info secara visual, dan memanggil dengan suara otomatis!
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 2. KIOSK VIEW (TICKET DISPENSER) -->
+        <section id="view-kiosk" class="hidden max-w-4xl mx-auto space-y-8">
+            <div class="text-center space-y-2">
+                <span class="text-brand-600 font-bold uppercase tracking-wider text-xs bg-brand-100 px-3 py-1 rounded-full">Mesin Pencetak Mandiri</span>
+                <h2 class="text-3xl font-extrabold text-brand-900">Silakan Ambil Nomor Antrean Anda</h2>
+                <p class="text-slate-500 text-sm max-w-md mx-auto">Silakan pilih kategori sesuai dengan jenis pendaftaran Anda di klinik hari ini.</p>
+            </div>
+
+            <!-- Big Buttons Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 my-6">
+                <!-- UMUM button -->
+                <button onclick="issueTicket('UMUM')" class="bg-white border-2 border-slate-100 hover:border-emerald-400 hover:shadow-xl hover:shadow-emerald-100 rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 group relative overflow-hidden active:scale-95">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-emerald-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+                    
+                    <div class="w-16 h-16 bg-emerald-100 text-emerald-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-500 group-hover:text-white transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                    </div>
+                    
+                    <div>
+                        <span class="text-sm font-bold text-emerald-600 tracking-widest uppercase">KODE - A</span>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1 mb-2">PASIEN UMUM</h3>
+                        <p class="text-slate-400 text-xs px-4">Pilih ini jika Anda tidak menggunakan jaminan BPJS Kesehatan (Bayar Mandiri / Asuransi Swasta).</p>
+                    </div>
+
+                    <div class="mt-8 bg-emerald-50 text-emerald-800 group-hover:bg-emerald-600 group-hover:text-white px-6 py-3 rounded-xl font-bold transition-all w-full flex justify-center items-center gap-2">
+                        <span>Cetak Tiket UMUM</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    </div>
+                </button>
+
+                <!-- BPJS button -->
+                <button onclick="issueTicket('BPJS')" class="bg-white border-2 border-slate-100 hover:border-brand-400 hover:shadow-xl hover:shadow-brand-100 rounded-3xl p-8 flex flex-col items-center justify-between text-center transition-all duration-300 group relative overflow-hidden active:scale-95">
+                    <div class="absolute top-0 right-0 w-24 h-24 bg-brand-50 rounded-bl-full -z-10 group-hover:scale-110 transition-transform"></div>
+
+                    <div class="w-16 h-16 bg-brand-100 text-brand-600 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-brand-500 group-hover:text-white transition-colors duration-300">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                        </svg>
+                    </div>
+
+                    <div>
+                        <span class="text-sm font-bold text-brand-600 tracking-widest uppercase">KODE - B</span>
+                        <h3 class="text-2xl font-bold text-slate-800 mt-1 mb-2">PASIEN BPJS</h3>
+                        <p class="text-slate-400 text-xs px-4">Pilih ini jika Anda mendaftar menggunakan rujukan/kartu JKN BPJS Kesehatan.</p>
+                    </div>
+
+                    <div class="mt-8 bg-brand-50 text-brand-800 group-hover:bg-brand-600 group-hover:text-white px-6 py-3 rounded-xl font-bold transition-all w-full flex justify-center items-center gap-2">
+                        <span>Cetak Tiket BPJS</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    </div>
+                </button>
+            </div>
+
+            <!-- Toast / Success alert -->
+            <div id="kiosk-success-toast" class="hidden transition-opacity duration-300 max-w-md mx-auto bg-slate-900/95 text-white py-4 px-6 rounded-2xl flex items-center justify-between shadow-2xl">
+                <div class="flex items-center gap-3">
+                    <span class="bg-emerald-500 rounded-full p-1.5 flex items-center justify-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                    </span>
+                    <div>
+                        <p class="font-bold text-sm">Tiket Berhasil Dicetak!</p>
+                        <p class="text-slate-400 text-xs" id="kiosk-toast-number">Nomor antrean Anda A-001</p>
+                    </div>
+                </div>
+                <span class="text-xs text-brand-300 font-bold bg-brand-900/50 px-2 py-1 rounded">MENGHUBUNGKAN PRINTER...</span>
+            </div>
+        </section>
+
+        <!-- 3. OPERATOR PANEL VIEW -->
+        <section id="view-operator" class="hidden space-y-6">
+            <!-- Selector & Status Header -->
+            <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row justify-between items-center gap-4">
+                <div class="flex items-center space-x-3 w-full md:w-auto">
+                    <div class="bg-brand-50 p-2.5 rounded-xl text-brand-600">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v5m-4 0h4" />
+                        </svg>
+                    </div>
+                    <div class="flex-grow">
+                        <label for="op-counter-select" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-0.5">PILIH LOKET ANDA</label>
+                        <select id="op-counter-select" onchange="changeCounter(this.value)" class="text-brand-950 font-bold text-lg focus:outline-none border-b-2 border-brand-200 focus:border-brand-500 bg-transparent pr-8 py-0.5 cursor-pointer">
+                            <!-- Dynamic counters -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Toggle Voice -->
+                <div class="flex items-center space-x-2 bg-brand-50/50 px-4 py-2 rounded-xl border border-brand-100">
+                    <input type="checkbox" id="voice-enable-toggle" checked class="w-4.5 h-4.5 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                    <label for="voice-enable-toggle" class="text-sm text-slate-700 font-semibold cursor-pointer">Aktifkan Panggilan Suara (TTS)</label>
+                </div>
+            </div>
+
+            <!-- Active Operator Dashboard Workspace -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left/Mid Area: Current Call & Action Controls -->
+                <div class="lg:col-span-2 space-y-6 flex flex-col">
+                    <!-- Current Active Call details -->
+                    <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm flex-grow flex flex-col justify-between">
+                        <div class="border-b border-slate-100 pb-4 mb-4 flex justify-between items-center">
+                            <span class="text-slate-400 text-xs font-bold uppercase tracking-wider">Antrean Aktif Saat Ini di Loket Ini</span>
+                            <span id="op-active-status" class="bg-brand-100 text-brand-800 text-xs font-bold px-2.5 py-0.5 rounded-full">Memanggil</span>
+                        </div>
+
+                        <div class="text-center py-6 flex-grow flex flex-col justify-center">
+                            <span class="text-slate-400 text-sm font-semibold">NOMOR ANTREAN</span>
+                            <h2 class="text-7xl font-black text-brand-900 tracking-tight my-4" id="op-active-number">-</h2>
+                            <div class="flex justify-center">
+                                <span class="bg-slate-100 text-slate-700 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider" id="op-active-category">-</span>
+                            </div>
+                        </div>
+
+                        <!-- Panel Buttons for current active call -->
+                        <div class="grid grid-cols-2 gap-4 mt-6">
+                            <button id="btn-op-recall" onclick="recallActiveCall()" disabled class="bg-brand-50 text-brand-700 hover:bg-brand-100 disabled:bg-slate-50 disabled:text-slate-400 disabled:cursor-not-allowed py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 0 1-1-1v-4a1 1 0 0 1 1-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                                Panggil Ulang (Recall)
+                            </button>
+                            <button id="btn-op-complete" onclick="completeActiveCall()" disabled class="bg-emerald-600 text-white hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed py-3 px-4 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition shadow-sm">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                Selesai Melayani
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Call Next Queue Actions -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Call Next UMUM -->
+                        <div class="bg-white border border-brand-100 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full uppercase">UMUM (A)</span>
+                                    <span class="text-slate-400 text-xs font-semibold" id="op-umum-wait-count">Sisa: 0</span>
+                                </div>
+                                <h4 class="font-bold text-slate-800 mt-2 text-sm">Berikutnya di Antrean UMUM:</h4>
+                                <p class="text-2xl font-black text-slate-800 mt-1" id="op-umum-next-val">-</p>
+                            </div>
+                            <button id="btn-op-next-umum" onclick="callNextQueue('UMUM')" class="w-full bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl text-sm transition flex items-center justify-center gap-1.5 shadow-sm shadow-emerald-600/10">
+                                Panggil UMUM Berikutnya
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                            </button>
+                        </div>
+
+                        <!-- Call Next BPJS -->
+                        <div class="bg-white border border-brand-100 rounded-2xl p-5 shadow-sm space-y-4 flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs font-bold text-brand-700 bg-brand-50 px-2 py-0.5 rounded-full uppercase">BPJS (B)</span>
+                                    <span class="text-slate-400 text-xs font-semibold" id="op-bpjs-wait-count">Sisa: 0</span>
+                                </div>
+                                <h4 class="font-bold text-slate-800 mt-2 text-sm">Berikutnya di Antrean BPJS:</h4>
+                                <p class="text-2xl font-black text-slate-800 mt-1" id="op-bpjs-next-val">-</p>
+                            </div>
+                            <button id="btn-op-next-bpjs" onclick="callNextQueue('BPJS')" class="w-full bg-brand-600 hover:bg-brand-700 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed text-white font-bold py-2.5 px-4 rounded-xl text-sm transition flex items-center justify-center gap-1.5 shadow-sm shadow-brand-600/10">
+                                Panggil BPJS Berikutnya
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Sidebar: Waiting Queue Lists -->
+                <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm flex flex-col h-[520px]">
+                    <h3 class="font-bold text-brand-950 text-base mb-4 flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16" /></svg>
+                        Daftar Antrean Menunggu
+                    </h3>
+                    
+                    <div class="flex border-b border-slate-100 text-xs font-semibold mb-3">
+                        <button onclick="switchOpList('all')" id="op-list-tab-all" class="flex-1 text-center pb-2 text-brand-600 border-b-2 border-brand-500 font-bold">Semua</button>
+                        <button onclick="switchOpList('UMUM')" id="op-list-tab-umum" class="flex-1 text-center pb-2 text-slate-500 hover:text-slate-800">Umum</button>
+                        <button onclick="switchOpList('BPJS')" id="op-list-tab-bpjs" class="flex-1 text-center pb-2 text-slate-500 hover:text-slate-800">BPJS</button>
+                    </div>
+
+                    <div id="op-queue-list-container" class="flex-grow overflow-y-auto space-y-2 pr-1">
+                        <!-- Queue items list will render dynamically -->
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 4. MONITOR VIEW (PUBLIC ANNOUNCEMENT SCREEN) -->
+        <section id="view-monitor" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Large Left Panel: Active Call -->
+                <div class="lg:col-span-2 bg-white border border-brand-100 rounded-3xl p-8 shadow-md flex flex-col justify-between min-h-[480px] text-center relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-brand-400 via-indigo-400 to-sky-400"></div>
+                    
+                    <!-- Header visual decoration -->
+                    <div class="flex justify-between items-center border-b border-slate-100 pb-4">
+                        <div class="text-left">
+                            <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">PANGGILAN AKTIF</span>
+                            <h3 class="text-base font-extrabold text-brand-900" id="mon-clinic-name">KLINIK SEHAT UTAMA</h3>
+                        </div>
+                        <div class="flex items-center gap-1.5 text-xs text-brand-600 font-bold bg-brand-50 px-2.5 py-1 rounded-full border border-brand-100" id="mon-voice-status">
+                            <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
+                            AUDIO ON
+                        </div>
+                    </div>
+
+                    <!-- Giant displays -->
+                    <div class="py-12 space-y-6 flex-grow flex flex-col justify-center">
+                        <span class="text-xs font-bold text-brand-500 tracking-widest uppercase bg-brand-50 px-4 py-1.5 rounded-full inline-block mx-auto border border-brand-100" id="mon-active-category">KATEGORI ANTRIAN</span>
+                        <div class="relative">
+                            <!-- Visual soundwave ring effect when speaking -->
+                            <div id="visual-voice-wave" class="hidden absolute inset-0 bg-brand-200/40 rounded-full scale-125 animate-pulse -z-10"></div>
+                            <h2 class="text-9xl font-black text-slate-800 tracking-tight" id="mon-active-number">-</h2>
+                        </div>
+                        <div>
+                            <span class="text-lg text-slate-400 font-medium">SILAKAN MENUJU KE</span>
+                            <div class="text-5xl font-black text-brand-600 mt-2 uppercase tracking-wide" id="mon-active-counter">-</div>
+                        </div>
+                    </div>
+
+                    <!-- Voice Call Trigger Demo inside Monitor (Helpful hint) -->
+                    <div class="text-slate-400 text-xs pt-4 border-t border-slate-100">
+                        Memutar bel otomatis setiap ada panggilan baru dari Layar Operator
+                    </div>
+                </div>
+
+                <!-- Right Panel: Grid of Counter Statuses -->
+                <div class="space-y-6">
+                    <!-- Counters Summary Panel -->
+                    <div class="bg-white border border-brand-100 rounded-3xl p-6 shadow-md space-y-4">
+                        <h3 class="font-extrabold text-brand-950 text-lg border-b border-slate-100 pb-3 flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 bg-brand-500 rounded-full"></span>
+                            Status Panggilan Loket
+                        </h3>
+                        <div class="grid grid-cols-1 gap-3" id="mon-counters-grid">
+                            <!-- Populated dynamically: Loket 1, Loket 2, etc. -->
+                        </div>
+                    </div>
+
+                    <!-- Recent Called Queue History -->
+                    <div class="bg-white border border-brand-100 rounded-3xl p-6 shadow-md space-y-4">
+                        <h3 class="font-extrabold text-brand-950 text-base flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            Riwayat Panggilan
+                        </h3>
+                        <div class="divide-y divide-slate-100 overflow-y-auto max-h-[180px] pr-1" id="mon-history-list">
+                            <!-- Populated dynamically -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ticker Text / Marquee footer style -->
+            <div class="bg-brand-900 text-brand-100 rounded-2xl py-3 px-6 shadow-lg overflow-hidden relative">
+                <div class="whitespace-nowrap flex gap-8 select-none text-sm font-semibold tracking-wide" id="mon-marquee-container">
+                    <div class="animate-marquee inline-block" id="mon-marquee-text">
+                        Selamat Datang di Klinik Utama Sehat • Harap persiapkan kartu identitas/kartu BPJS Anda sebelum dipanggil • Budayakan tertib mengantre untuk kenyamanan bersama • Semoga lekas sembuh • Terima kasih atas kunjungan Anda.
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 5. SETTINGS VIEW -->
+        <section id="view-settings" class="hidden max-w-4xl mx-auto space-y-6">
+            <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4">Pengaturan Informasi Klinik</h3>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="settings-clinic-name" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Nama Klinik / Faskes</label>
+                        <input type="text" id="settings-clinic-name" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label for="settings-clinic-footer" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Pesan Tiket (Footer)</label>
+                        <input type="text" id="settings-clinic-footer" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="settings-clinic-address" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Alamat Klinik</label>
+                        <input type="text" id="settings-clinic-address" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                    </div>
+                </div>
+                
+                <div class="flex justify-end mt-4">
+                    <button onclick="saveClinicInfo()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-5 rounded-xl text-sm transition shadow-sm">
+                        Simpan Informasi
+                    </button>
+                </div>
+            </div>
+
+            <!-- Counters configuration -->
+            <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4">Pengaturan Loket Pelayanan</h3>
+                
+                <div class="space-y-4">
+                    <div class="flex gap-2">
+                        <input type="text" id="new-counter-name" placeholder="Contoh: Loket 4" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition flex-grow">
+                        <button onclick="addCounter()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-xl text-sm transition">
+                            Tambah Loket
+                        </button>
+                    </div>
+
+                    <div class="border border-slate-100 rounded-xl divide-y divide-slate-100" id="settings-counters-list">
+                        <!-- Counters will list here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Danger Zone / Data Management -->
+            <div class="bg-red-50 border border-red-100 rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-red-900 text-lg border-b border-red-200 pb-3 mb-4">Manajemen Data Antrean</h3>
+                <p class="text-sm text-red-700 mb-4">Tindakan berikut akan memodifikasi penyimpanan antrean lokal di browser Anda.</p>
+                
+                <div class="flex flex-wrap gap-4">
+                    <button onclick="confirmReset()" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition flex items-center gap-1.5 shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                        Kosongkan / Reset Semua Antrean
+                    </button>
+                    <button onclick="generateMockData()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-5 rounded-xl text-sm transition flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.2" /></svg>
+                        Buat Data Simulasi (Mock Antrean)
+                    </button>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- FOOTER INFO no-print -->
+    <footer class="bg-white border-t border-slate-100 py-6 text-center text-xs text-slate-400 no-print">
+        <div class="max-w-7xl mx-auto px-4">
+            <p>&copy; 2026 Sistem Antrean Terintegrasi. Desain Bersih dengan Tailwind CSS & JS Offline.</p>
+        </div>
+    </footer>
+
+    <!-- PRINT ONLY CONTAINER (HIDDEN ON SCREEN, DESIGNED FOR 80mm THERMAL RECEIPT) -->
+    <div id="print-ticket-area" class="hidden">
+        <div class="text-center font-mono text-black">
+            <h1 class="text-lg font-bold tracking-tight uppercase" id="print-clinic-name">KLINIK SEHAT UTAMA</h1>
+            <p class="text-xs mt-1" id="print-clinic-address">Jl. Kesehatan Indah No. 123, Bandung</p>
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <p class="text-sm font-bold tracking-wider">TIKET ANTRIAN</p>
+            <p class="text-xs font-semibold bg-black text-white px-2 py-0.5 mt-1 inline-block uppercase" id="print-category">PASIEN UMUM</p>
+            
+            <h2 class="text-5xl font-black my-4" id="print-ticket-number">A-005</h2>
+            
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <div class="text-xs text-left space-y-1">
+                <div class="flex justify-between">
+                    <span>Waktu Cetak:</span>
+                    <span id="print-datetime">20/08/2026 22:30</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Menunggu di Depan:</span>
+                    <span id="print-wait-count">3 Orang</span>
+                </div>
+            </div>
+            
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <p class="text-xs font-bold italic" id="print-footer-msg">Semoga Lekas Sembuh</p>
+            <p class="text-[9px] text-gray-700 mt-1">Harap simpan tiket ini hingga dipanggil petugas.</p>
+        </div>
+    </div>
+
+    <!-- CUSTOM MARQUEE TAILWIND EXTRA STYLES -->
+    <style>
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .animate-marquee {
+            animation: marquee 25s linear infinite;
+        }
+        #mon-marquee-container:hover .animate-marquee {
+            animation-play-state: paused;
+        }
+    </style>
+
+    <!-- SYSTEM JAVASCRIPT CODE -->
+    <script>
+        // --- DATABASE & INITIAL STATES ---
+        const DEFAULT_CLINIC = {
+            name: "KLINIK SEHAT UTAMA",
+            address: "Jl. Raya Sehat No. 123, Bandung, Jawa Barat",
+            footer: "Semoga Lekas Sembuh & Terima Kasih"
+        };
+        const DEFAULT_COUNTERS = ["Loket 1", "Loket 2", "Loket 3"];
+
+        let clinicInfo = JSON.parse(localStorage.getItem('antrian_clinic')) || DEFAULT_CLINIC;
+        let counters = JSON.parse(localStorage.getItem('antrian_counters')) || DEFAULT_COUNTERS;
+        let queues = JSON.parse(localStorage.getItem('antrian_queues')) || [];
+        
+        // Session states
+        let currentView = 'dashboard';
+        let opSelectedCounter = localStorage.getItem('antrian_op_counter') || counters[0] || 'Loket 1';
+        let opSelectedListTab = 'all'; // 'all', 'UMUM', 'BPJS'
+
+        // Audio Settings
+        let syntheticVoicesLoaded = false;
+        
+        // --- LIFE CYCLE INITIALIZATION ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initializeData();
+            switchView('dashboard');
+            
+            // Sync with other open browser tabs/windows
+            window.addEventListener('storage', (event) => {
+                if (event.key === 'antrian_queues') {
+                    queues = JSON.parse(event.newValue) || [];
+                    updateUI();
+                } else if (event.key === 'antrian_clinic') {
+                    clinicInfo = JSON.parse(event.newValue) || DEFAULT_CLINIC;
+                    updateUI();
+                } else if (event.key === 'antrian_counters') {
+                    counters = JSON.parse(event.newValue) || DEFAULT_COUNTERS;
+                    updateCounterOptions();
+                    updateUI();
+                } else if (event.key === 'antrian_active_call_trigger') {
+                    // Triggers when a counter panggil/recall something
+                    const callDetail = JSON.parse(event.newValue);
+                    if (currentView === 'monitor' && callDetail) {
+                        handleMonitorAnnouncement(callDetail);
+                    }
+                }
+            });
+            
+            // Initialize voice speech load
+            if ('speechSynthesis' in window) {
+                window.speechSynthesis.getVoices();
+                window.speechSynthesis.onvoiceschanged = () => {
+                    syntheticVoicesLoaded = true;
+                };
+            }
+        });
+
+        // Initialize defaults in localStorage if empty
+        function initializeData() {
+            if (!localStorage.getItem('antrian_clinic')) {
+                localStorage.setItem('antrian_clinic', JSON.stringify(DEFAULT_CLINIC));
+            }
+            if (!localStorage.getItem('antrian_counters')) {
+                localStorage.setItem('antrian_counters', JSON.stringify(DEFAULT_COUNTERS));
+            }
+            if (!localStorage.getItem('antrian_queues')) {
+                localStorage.setItem('antrian_queues', JSON.stringify([]));
+            }
+            
+            updateCounterOptions();
+            updateUI();
+        }
+
+        // --- CORE NAVIGATION & VIEWS ---
+        function switchView(viewName) {
+            currentView = viewName;
+            
+            // Hide all views
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-kiosk').classList.add('hidden');
+            document.getElementById('view-operator').classList.add('hidden');
+            document.getElementById('view-monitor').classList.add('hidden');
+            document.getElementById('view-settings').classList.add('hidden');
+
+            // Show target view
+            document.getElementById(`view-${viewName}`).classList.remove('hidden');
+
+            // Update Tab styles (Desktop navbar)
+            const tabs = ['dashboard', 'kiosk', 'operator', 'monitor', 'settings'];
+            tabs.forEach(tab => {
+                const el = document.getElementById(`tab-${tab}`);
+                if (tab === viewName) {
+                    el.className = "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-brand-700 bg-white shadow-sm";
+                } else {
+                    el.className = "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50";
+                }
+            });
+
+            // Update Mobile dropdown selection
+            document.getElementById('mobile-nav').value = viewName;
+
+            // Load settings into input fields if viewing settings
+            if (viewName === 'settings') {
+                document.getElementById('settings-clinic-name').value = clinicInfo.name;
+                document.getElementById('settings-clinic-address').value = clinicInfo.address;
+                document.getElementById('settings-clinic-footer').value = clinicInfo.footer;
+                renderSettingsCountersList();
+            }
+
+            // Sync page data when active
+            updateUI();
+        }
+
+        // --- HELPER RENDERING FUNCTIONS ---
+        function updateCounterOptions() {
+            const selectEl = document.getElementById('op-counter-select');
+            selectEl.innerHTML = '';
+            counters.forEach(counter => {
+                const opt = document.createElement('option');
+                opt.value = counter;
+                opt.textContent = counter;
+                if (counter === opSelectedCounter) opt.selected = true;
+                selectEl.appendChild(opt);
+            });
+        }
+
+        function updateUI() {
+            // Apply clinic info headers
+            document.getElementById('header-clinic-name').textContent = clinicInfo.name;
+            document.getElementById('mon-clinic-name').textContent = clinicInfo.name;
+
+            // Calculate basic stats
+            const total = queues.length;
+            const waiting = queues.filter(q => q.status === 'waiting').length;
+            const completed = queues.filter(q => q.status === 'completed').length;
+            
+            document.getElementById('dash-stat-total').textContent = total;
+            document.getElementById('dash-stat-waiting').textContent = waiting;
+            document.getElementById('dash-stat-completed').textContent = completed;
+
+            // Kategori UMUM (A) statistics
+            const umumAll = queues.filter(q => q.category === 'UMUM');
+            const umumWaiting = umumAll.filter(q => q.status === 'waiting');
+            const umumLast = umumAll.length > 0 ? `A-${String(umumAll[umumAll.length - 1].number).padStart(3, '0')}` : 'A-000';
+            
+            // Find active calling for UMUM
+            const activeUmumItem = queues.filter(q => q.category === 'UMUM' && q.status === 'calling')[0];
+            const umumCurrent = activeUmumItem ? activeUmumItem.formattedNumber : (queues.filter(q => q.category === 'UMUM' && q.status === 'called').slice(-1)[0]?.formattedNumber || 'A-000');
+            
+            document.getElementById('dash-umum-last').textContent = umumLast;
+            document.getElementById('dash-umum-current').textContent = umumCurrent;
+            document.getElementById('dash-umum-remaining').textContent = `${umumWaiting.length} orang`;
+
+            // Kategori BPJS (B) statistics
+            const bpjsAll = queues.filter(q => q.category === 'BPJS');
+            const bpjsWaiting = bpjsAll.filter(q => q.status === 'waiting');
+            const bpjsLast = bpjsAll.length > 0 ? `B-${String(bpjsAll[bpjsAll.length - 1].number).padStart(3, '0')}` : 'B-000';
+            
+            // Find active calling for BPJS
+            const activeBpjsItem = queues.filter(q => q.category === 'BPJS' && q.status === 'calling')[0];
+            const bpjsCurrent = activeBpjsItem ? activeBpjsItem.formattedNumber : (queues.filter(q => q.category === 'BPJS' && q.status === 'called').slice(-1)[0]?.formattedNumber || 'B-000');
+
+            document.getElementById('dash-bpjs-last').textContent = bpjsLast;
+            document.getElementById('dash-bpjs-current').textContent = bpjsCurrent;
+            document.getElementById('dash-bpjs-remaining').textContent = `${bpjsWaiting.length} orang`;
+
+            // --- OPERATOR PANELS ---
+            if (currentView === 'operator') {
+                renderOperatorWorkspace();
+            }
+
+            // --- MONITOR SCREEN PANELS ---
+            if (currentView === 'monitor') {
+                renderMonitorWorkspace();
+            }
+        }
+
+        // --- OPERATOR VIEW BUSINESS LOGIC ---
+        function changeCounter(counterVal) {
+            opSelectedCounter = counterVal;
+            localStorage.setItem('antrian_op_counter', counterVal);
+            renderOperatorWorkspace();
+        }
+
+        function switchOpList(category) {
+            opSelectedListTab = category;
+            const tabs = ['all', 'UMUM', 'BPJS'];
+            tabs.forEach(tab => {
+                const el = document.getElementById(`op-list-tab-${tab.toLowerCase()}`);
+                if (tab === category) {
+                    el.className = "flex-1 text-center pb-2 text-brand-600 border-b-2 border-brand-500 font-bold";
+                } else {
+                    el.className = "flex-1 text-center pb-2 text-slate-500 hover:text-slate-800";
+                }
+            });
+            renderOperatorList();
+        }
+
+        function renderOperatorWorkspace() {
+            // Find active call for THIS counter
+            const currentCounterActive = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
+            
+            const numEl = document.getElementById('op-active-number');
+            const catEl = document.getElementById('op-active-category');
+            const statusEl = document.getElementById('op-active-status');
+            const btnRecall = document.getElementById('btn-op-recall');
+            const btnComplete = document.getElementById('btn-op-complete');
+
+            if (currentCounterActive) {
+                numEl.textContent = currentCounterActive.formattedNumber;
+                catEl.textContent = `PASIEN ${currentCounterActive.category}`;
+                statusEl.textContent = currentCounterActive.status === 'calling' ? 'MEMANGGIL...' : 'AKTIF DILAYANI';
+                statusEl.className = currentCounterActive.status === 'calling' 
+                    ? "bg-amber-100 text-amber-800 text-xs font-bold px-2.5 py-0.5 rounded-full animate-pulse"
+                    : "bg-emerald-100 text-emerald-800 text-xs font-bold px-2.5 py-0.5 rounded-full";
+                
+                btnRecall.disabled = false;
+                btnComplete.disabled = false;
+            } else {
+                numEl.textContent = '-';
+                catEl.textContent = '-';
+                statusEl.textContent = 'Kosong';
+                statusEl.className = "bg-slate-100 text-slate-500 text-xs font-bold px-2.5 py-0.5 rounded-full";
+                
+                btnRecall.disabled = true;
+                btnComplete.disabled = true;
+            }
+
+            // Find NEXT items
+            const nextUmum = queues.find(q => q.category === 'UMUM' && q.status === 'waiting');
+            const nextBpjs = queues.find(q => q.category === 'BPJS' && q.status === 'waiting');
+
+            const umumWait = queues.filter(q => q.category === 'UMUM' && q.status === 'waiting').length;
+            const bpjsWait = queues.filter(q => q.category === 'BPJS' && q.status === 'waiting').length;
+
+            document.getElementById('op-umum-wait-count').textContent = `Sisa: ${umumWait}`;
+            document.getElementById('op-bpjs-wait-count').textContent = `Sisa: ${bpjsWait}`;
+
+            document.getElementById('op-umum-next-val').textContent = nextUmum ? nextUmum.formattedNumber : 'Kosong';
+            document.getElementById('op-bpjs-next-val').textContent = nextBpjs ? nextBpjs.formattedNumber : 'Kosong';
+
+            // Disable buttons if no queue is waiting
+            document.getElementById('btn-op-next-umum').disabled = !nextUmum;
+            document.getElementById('btn-op-next-bpjs').disabled = !nextBpjs;
+
+            renderOperatorList();
+        }
+
+        function renderOperatorList() {
+            const container = document.getElementById('op-queue-list-container');
+            container.innerHTML = '';
+
+            let filtered = queues.filter(q => q.status === 'waiting');
+            if (opSelectedListTab !== 'all') {
+                filtered = filtered.filter(q => q.category === opSelectedListTab);
+            }
+
+            if (filtered.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-sm">
+                        Tidak ada antrean dalam tunggu.
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach(q => {
+                const item = document.createElement('div');
+                item.className = "flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition";
+                
+                const badgeColor = q.category === 'UMUM' ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-100 text-brand-800';
+                const formattedTime = new Date(q.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+                item.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="text-base font-extrabold text-slate-800">${q.formattedNumber}</span>
+                        <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${q.category}</span>
+                    </div>
+                    <span class="text-xs text-slate-400">${formattedTime} WIB</span>
+                `;
+                container.appendChild(item);
+            });
+        }
+
+        // Operator triggers calling
+        function callNextQueue(category) {
+            // Selesai-kan antrean aktif sebelumnya di loket ini jika ada
+            const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
+            if (activeCall) {
+                activeCall.status = 'completed';
+            }
+
+            // Ambil nomor antrean waiting tertua untuk kategori terpilih
+            const target = queues.find(q => q.category === category && q.status === 'waiting');
+            if (!target) return;
+
+            target.status = 'calling';
+            target.counter = opSelectedCounter;
+            target.calledAt = new Date().toISOString();
+
+            saveQueues();
+            
+            // Broadcast event to notify monitor screen
+            triggerCallNotification(target);
+            
+            updateUI();
+        }
+
+        function recallActiveCall() {
+            const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
+            if (!activeCall) return;
+
+            activeCall.status = 'calling'; // set to calling state to pulse UI
+            saveQueues();
+
+            triggerCallNotification(activeCall);
+            updateUI();
+        }
+
+        function completeActiveCall() {
+            const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
+            if (!activeCall) return;
+
+            activeCall.status = 'completed';
+            saveQueues();
+            updateUI();
+        }
+
+        // Set trigger in localStorage to notify monitor window of new call
+        function triggerCallNotification(queueItem) {
+            const isVoiceEnabled = document.getElementById('voice-enable-toggle').checked;
+            
+            const payload = {
+                id: queueItem.id,
+                formattedNumber: queueItem.formattedNumber,
+                prefix: queueItem.prefix,
+                number: queueItem.number,
+                counter: queueItem.counter,
+                category: queueItem.category,
+                time: new Date().getTime(),
+                voice: isVoiceEnabled
+            };
+            
+            localStorage.setItem('antrian_active_call_trigger', JSON.stringify(payload));
+            
+            // Play voice immediately locally on operator tab if checked
+            if (isVoiceEnabled) {
+                announceCall(queueItem.prefix, queueItem.number, queueItem.counter);
+            }
+        }
+
+        // --- MONITOR VIEW RENDER ---
+        function renderMonitorWorkspace() {
+            // Find current active panggil globally (the one being called now or last called)
+            const activeCalls = queues.filter(q => q.status === 'calling' || q.status === 'called');
+            
+            // Sort by calledAt descending
+            activeCalls.sort((a, b) => new Date(b.calledAt) - new Date(a.calledAt));
+            const latestCall = activeCalls[0];
+
+            const activeNum = document.getElementById('mon-active-number');
+            const activeCounter = document.getElementById('mon-active-counter');
+            const activeCat = document.getElementById('mon-active-category');
+
+            if (latestCall) {
+                activeNum.textContent = latestCall.formattedNumber;
+                activeCounter.textContent = latestCall.counter;
+                activeCat.textContent = `PASIEN ${latestCall.category}`;
+                
+                // Color formatting
+                if (latestCall.category === 'UMUM') {
+                    activeCat.className = "text-xs font-bold text-emerald-700 tracking-widest uppercase bg-emerald-50 px-4 py-1.5 rounded-full inline-block mx-auto border border-emerald-100";
+                } else {
+                    activeCat.className = "text-xs font-bold text-brand-700 tracking-widest uppercase bg-brand-50 px-4 py-1.5 rounded-full inline-block mx-auto border border-brand-100";
+                }
+            } else {
+                activeNum.textContent = '-';
+                activeCounter.textContent = 'Menunggu Panggilan';
+                activeCat.textContent = 'KATEGORI ANTRIAN';
+                activeCat.className = "text-xs font-bold text-slate-500 tracking-widest uppercase bg-slate-50 px-4 py-1.5 rounded-full inline-block mx-auto border border-slate-100";
+            }
+
+            // Render Counters Status Grid
+            const gridContainer = document.getElementById('mon-counters-grid');
+            gridContainer.innerHTML = '';
+            
+            counters.forEach(counter => {
+                const currentCall = queues.find(q => q.counter === counter && (q.status === 'calling' || q.status === 'called'));
+                const callText = currentCall ? currentCall.formattedNumber : '-';
+                const statusColor = currentCall 
+                    ? (currentCall.category === 'UMUM' ? 'text-emerald-600 bg-emerald-50' : 'text-brand-600 bg-brand-50')
+                    : 'text-slate-400 bg-slate-50';
+
+                const div = document.createElement('div');
+                div.className = "flex items-center justify-between p-3 bg-slate-50 rounded-2xl border border-slate-100";
+                div.innerHTML = `
+                    <span class="font-bold text-slate-700 text-sm">${counter}</span>
+                    <span class="font-extrabold text-xl px-4 py-1 rounded-xl ${statusColor}">${callText}</span>
+                `;
+                gridContainer.appendChild(div);
+            });
+
+            // Render Recent Called Queue History (called history)
+            const historyList = document.getElementById('mon-history-list');
+            historyList.innerHTML = '';
+
+            const historyItems = queues.filter(q => q.status === 'called' || q.status === 'completed');
+            historyItems.sort((a, b) => new Date(b.calledAt) - new Date(a.calledAt));
+            
+            // Slice top 5 history
+            const displayHistory = historyItems.slice(0, 5);
+
+            if (displayHistory.length === 0) {
+                historyList.innerHTML = `
+                    <div class="text-slate-400 text-xs text-center py-4">Belum ada panggilan antrean.</div>
+                `;
+            } else {
+                displayHistory.forEach(q => {
+                    const row = document.createElement('div');
+                    row.className = "flex justify-between items-center py-2 text-xs";
+                    const isUmum = q.category === 'UMUM';
+                    const nameColor = isUmum ? 'text-emerald-600 font-bold' : 'text-brand-600 font-bold';
+                    const timeString = new Date(q.calledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+
+                    row.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <span class="${nameColor} text-sm">${q.formattedNumber}</span>
+                            <span class="text-[9px] text-slate-400 font-bold bg-slate-100 px-1.5 py-0.5 rounded uppercase">${q.category}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-slate-700">${q.counter}</span>
+                            <span class="block text-[10px] text-slate-400">${timeString} WIB</span>
+                        </div>
+                    `;
+                    historyList.appendChild(row);
+                });
+            }
+        }
+
+        // Auto announce triggered by event
+        function handleMonitorAnnouncement(callDetail) {
+            // Find and update item status from global queue
+            const index = queues.findIndex(q => q.id === callDetail.id);
+            if (index !== -1) {
+                // If it is calling, play visual animation on the monitor screen
+                const pulseEffect = document.getElementById('visual-voice-wave');
+                if (pulseEffect) {
+                    pulseEffect.classList.remove('hidden');
+                    setTimeout(() => pulseEffect.classList.add('hidden'), 5500);
+                }
+
+                // If voice is enabled, play sound
+                if (callDetail.voice) {
+                    playChime().then(() => {
+                        announceCall(callDetail.prefix, callDetail.number, callDetail.counter);
+                    });
+                } else {
+                    playChime(); // Play simple sound warning
+                }
+
+                // Update state status from 'calling' to 'called' after visual call completes
+                setTimeout(() => {
+                    if (queues[index].status === 'calling') {
+                        queues[index].status = 'called';
+                        saveQueues();
+                        updateUI();
+                    }
+                }, 6000);
+            }
+        }
+
+        // --- AUDIO ENGINE (SYNTHETIC CHIME & TTS) ---
+
+        // Electronic Ding-Dong Chime using browser Web Audio API
+        function playChime() {
+            return new Promise((resolve) => {
+                try {
+                    const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                    
+                    // First Chime Tone (higher pitch)
+                    const osc1 = audioCtx.createOscillator();
+                    const gain1 = audioCtx.createGain();
+                    osc1.connect(gain1);
+                    gain1.connect(audioCtx.destination);
+                    osc1.type = 'sine';
+                    osc1.frequency.setValueAtTime(554.37, audioCtx.currentTime); // C#5
+                    gain1.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                    gain1.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.6);
+                    osc1.start(audioCtx.currentTime);
+                    osc1.stop(audioCtx.currentTime + 0.6);
+                    
+                    // Second Chime Tone (lower pitch - play after 350ms delay)
+                    setTimeout(() => {
+                        const osc2 = audioCtx.createOscillator();
+                        const gain2 = audioCtx.createGain();
+                        osc2.connect(gain2);
+                        gain2.connect(audioCtx.destination);
+                        osc2.type = 'sine';
+                        osc2.frequency.setValueAtTime(440.00, audioCtx.currentTime); // A4
+                        gain2.gain.setValueAtTime(0.2, audioCtx.currentTime);
+                        gain2.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.7);
+                        osc2.start(audioCtx.currentTime);
+                        osc2.stop(audioCtx.currentTime + 0.7);
+                        
+                        setTimeout(() => {
+                            resolve();
+                        }, 700);
+                    }, 350);
+                } catch(e) {
+                    console.log("AudioContext is blocked by browser autoplay policy.");
+                    resolve();
+                }
+            });
+        }
+
+        // Speech announcement
+        function announceCall(prefix, number, counterName) {
+            if (!('speechSynthesis' in window)) return;
+            
+            // Format number to 3 digits (e.g. 5 -> 005)
+            const padded = String(number).padStart(3, '0');
+            
+            // Digit dictionaries
+            const digitTranslation = {
+                '0': 'nol',
+                '1': 'satu',
+                '2': 'dua',
+                '3': 'tiga',
+                '4': 'empat',
+                '5': 'lima',
+                '6': 'enam',
+                '7': 'tujuh',
+                '8': 'delapan',
+                '9': 'sembilan'
+            };
+
+            const prefixLetter = prefix.toUpperCase();
+            const digitsSpelled = padded.split('').map(d => digitTranslation[d]).join(', ');
+            
+            // Counter name spelling
+            let counterSpelled = counterName.toLowerCase();
+            // Translate loket digit if exists (e.g. Loket 1 -> Loket satu)
+            Object.keys(digitTranslation).forEach(numKey => {
+                counterSpelled = counterSpelled.replace(new RegExp(numKey, 'g'), ' ' + digitTranslation[numKey]);
+            });
+
+            // Construct Indonesian speech text
+            const text = `Nomor antrean, ${prefixLetter}, ${digitsSpelled}, silakan menuju, ${counterSpelled}`;
+            
+            // Stop any ongoing announcement
+            window.speechSynthesis.cancel();
+            
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = 'id-ID';
+            utterance.rate = 0.85; // Natural speed slightly relaxed
+            utterance.pitch = 1.0;
+            
+            // Bind to Indonesian voice if available
+            const voices = window.speechSynthesis.getVoices();
+            const indVoice = voices.find(v => v.lang.toLowerCase().includes('id'));
+            if (indVoice) {
+                utterance.voice = indVoice;
+            }
+            
+            window.speechSynthesis.speak(utterance);
+        }
+
+        // --- KIOSK TICKET ISSUING & PRINT ENGINE ---
+        function issueTicket(category) {
+            // Calculate prefix and number
+            const prefix = category === 'UMUM' ? 'A' : 'B';
+            const catQueues = queues.filter(q => q.category === category);
+            
+            const nextNumber = catQueues.length > 0 ? (catQueues[catQueues.length - 1].number + 1) : 1;
+            const formattedNumber = `${prefix}-${String(nextNumber).padStart(3, '0')}`;
+            
+            // Create queue item
+            const newItem = {
+                id: new Date().getTime(),
+                category: category,
+                prefix: prefix,
+                number: nextNumber,
+                formattedNumber: formattedNumber,
+                status: 'waiting',
+                createdAt: new Date().toISOString(),
+                calledAt: null,
+                counter: null
+            };
+
+            // Save to DB
+            queues.push(newItem);
+            saveQueues();
+            updateUI();
+
+            // Calculate waiting size in front of this ticket
+            const waitingCount = queues.filter(q => q.category === category && q.status === 'waiting').length - 1;
+
+            // Trigger physical print page setup
+            triggerPrintLayout(newItem, waitingCount);
+
+            // Trigger Kiosk user feedback Toast popup
+            const toast = document.getElementById('kiosk-success-toast');
+            document.getElementById('kiosk-toast-number').textContent = `Nomor antrean Anda ${formattedNumber}`;
+            toast.classList.remove('hidden');
+            toast.style.opacity = '1';
+            
+            // Auto hide toast after 4s
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                setTimeout(() => toast.classList.add('hidden'), 300);
+            }, 4000);
+        }
+
+        function triggerPrintLayout(item, waitCount) {
+            // Fill thermal layout info
+            document.getElementById('print-clinic-name').textContent = clinicInfo.name;
+            document.getElementById('print-clinic-address').textContent = clinicInfo.address;
+            document.getElementById('print-category').textContent = `PASIEN ${item.category}`;
+            document.getElementById('print-ticket-number').textContent = item.formattedNumber;
+            document.getElementById('print-footer-msg').textContent = clinicInfo.footer;
+            
+            // Format current date time
+            const now = new Date();
+            const datetimeStr = now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+            document.getElementById('print-datetime').textContent = datetimeStr;
+            document.getElementById('print-wait-count').textContent = `${waitCount} Orang`;
+
+            // Call browser native window print trigger
+            setTimeout(() => {
+                window.print();
+            }, 250);
+        }
+
+        // --- SETTINGS VIEW ACTIONS ---
+        function saveClinicInfo() {
+            const nameInput = document.getElementById('settings-clinic-name').value.trim();
+            const addressInput = document.getElementById('settings-clinic-address').value.trim();
+            const footerInput = document.getElementById('settings-clinic-footer').value.trim();
+
+            if (!nameInput) {
+                alert('Nama klinik tidak boleh kosong!');
+                return;
+            }
+
+            clinicInfo = {
+                name: nameInput,
+                address: addressInput,
+                footer: footerInput
+            };
+
+            localStorage.setItem('antrian_clinic', JSON.stringify(clinicInfo));
+            updateUI();
+            alert('Informasi klinik berhasil diperbarui.');
+        }
+
+        function renderSettingsCountersList() {
+            const container = document.getElementById('settings-counters-list');
+            container.innerHTML = '';
+
+            counters.forEach((counter, idx) => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-3 text-sm";
+                row.innerHTML = `
+                    <span class="font-bold text-slate-800">${counter}</span>
+                    <button onclick="removeCounter(${idx})" class="text-red-500 hover:text-red-700 font-bold text-xs flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7" /></svg>
+                        Hapus
+                    </button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function addCounter() {
+            const input = document.getElementById('new-counter-name');
+            const val = input.value.trim();
+            if (!val) return;
+
+            if (counters.includes(val)) {
+                alert('Nama loket sudah terdaftar!');
+                return;
+            }
+
+            counters.push(val);
+            localStorage.setItem('antrian_counters', JSON.stringify(counters));
+            input.value = '';
+            
+            updateCounterOptions();
+            renderSettingsCountersList();
+            updateUI();
+        }
+
+        function removeCounter(index) {
+            if (counters.length <= 1) {
+                alert('Minimal harus menyisakan 1 loket aktif!');
+                return;
+            }
+            if (confirm(`Apakah Anda yakin ingin menghapus loket "${counters[index]}"?`)) {
+                counters.splice(index, 1);
+                localStorage.setItem('antrian_counters', JSON.stringify(counters));
+                
+                // Adjust selected operator counter if current deleted
+                if (!counters.includes(opSelectedCounter)) {
+                    opSelectedCounter = counters[0];
+                    localStorage.setItem('antrian_op_counter', opSelectedCounter);
+                }
+
+                updateCounterOptions();
+                renderSettingsCountersList();
+                updateUI();
+            }
+        }
+
+        // Reset database
+        function confirmReset() {
+            if (confirm('PERINGATAN! Anda akan menghapus seluruh data antrean saat ini dan mengulang nomor ke 0. Lanjutkan?')) {
+                queues = [];
+                saveQueues();
+                updateUI();
+                alert('Seluruh data antrean berhasil di-reset.');
+            }
+        }
+
+        // Mock database generation for visual simulation demo
+        function generateMockData() {
+            queues = [];
+            const categories = ['UMUM', 'BPJS'];
+            const prefixes = { 'UMUM': 'A', 'BPJS': 'B' };
+            const timeOffset = new Date().getTime();
+
+            // Generate some mock history (completed)
+            for (let i = 1; i <= 8; i++) {
+                const cat = categories[Math.floor(Math.random() * 2)];
+                const pref = prefixes[cat];
+                const activeNum = queues.filter(q => q.category === cat).length + 1;
+                
+                queues.push({
+                    id: timeOffset - (20 - i) * 60000,
+                    category: cat,
+                    prefix: pref,
+                    number: activeNum,
+                    formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
+                    status: 'completed',
+                    createdAt: new Date(timeOffset - (20 - i) * 60000).toISOString(),
+                    calledAt: new Date(timeOffset - (18 - i) * 60000).toISOString(),
+                    counter: counters[Math.floor(Math.random() * counters.length)]
+                });
+            }
+
+            // Generate active called statuses
+            counters.forEach((cnt, idx) => {
+                const cat = idx % 2 === 0 ? 'UMUM' : 'BPJS';
+                const pref = prefixes[cat];
+                const activeNum = queues.filter(q => q.category === cat).length + 1;
+
+                queues.push({
+                    id: timeOffset - (3 - idx) * 60000,
+                    category: cat,
+                    prefix: pref,
+                    number: activeNum,
+                    formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
+                    status: 'called',
+                    createdAt: new Date(timeOffset - (10 - idx) * 60000).toISOString(),
+                    calledAt: new Date(timeOffset - (3 - idx) * 60000).toISOString(),
+                    counter: cnt
+                });
+            });
+
+            // Generate waiting queues (in line)
+            for (let i = 1; i <= 6; i++) {
+                const cat = i % 2 === 0 ? 'UMUM' : 'BPJS';
+                const pref = prefixes[cat];
+                const activeNum = queues.filter(q => q.category === cat).length + 1;
+
+                queues.push({
+                    id: timeOffset + i * 10000,
+                    category: cat,
+                    prefix: pref,
+                    number: activeNum,
+                    formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
+                    status: 'waiting',
+                    createdAt: new Date(timeOffset + i * 10000).toISOString(),
+                    calledAt: null,
+                    counter: null
+                });
+            }
+
+            saveQueues();
+            updateUI();
+            alert('Berhasil menghasilkan data simulasi antrean.');
+        }
+
+        // Save helper
+        function saveQueues() {
+            localStorage.setItem('antrian_queues', JSON.stringify(queues));
+        }
+    </script>
+</body>
+</html>
