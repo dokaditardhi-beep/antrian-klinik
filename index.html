@@ -34,6 +34,10 @@
     <style>
         /* Print ticket styling rules */
         @media print {
+            @page {
+                size: 58mm auto;
+                margin: 0;
+            }
             body * {
                 visibility: hidden;
             }
@@ -48,10 +52,10 @@
                 position: absolute;
                 left: 0;
                 top: 0;
-                width: 100%;
-                max-width: 80mm;
+                width: 58mm;
+                max-width: 58mm;
                 margin: 0;
-                padding: 10px;
+                padding: 0;
                 box-sizing: border-box;
                 font-family: monospace;
                 color: black;
@@ -938,91 +942,87 @@
         </div>
     </div>
 
-    <!-- PRINT RECEIPT CONTAINER (HIDDEN ON SCREEN, DESIGNED FOR 80mm THERMAL RECEIPT) -->
+    <!-- PRINT RECEIPT CONTAINER (HIDDEN ON SCREEN, DESIGNED FOR 58mm THERMAL RECEIPT) -->
     <div id="print-receipt-area" class="hidden">
-        <div class="text-center font-mono text-black">
-            <h1 class="text-lg font-bold tracking-tight uppercase" id="print-rcpt-clinic-name">KLINIK JAYA MEDIKA</h1>
-            <p class="text-xs mt-1" id="print-rcpt-clinic-address">Jl. Jaya Medika No. 123, Bandung</p>
-            <div class="border-b border-dashed border-black my-3"></div>
-            
-            <p class="text-sm font-bold tracking-wider">STRUK PEMBAYARAN / POS</p>
-            <p class="text-[10px] text-gray-700 font-bold" id="print-rcpt-id">No. Transaksi: RCPT-123456</p>
-            
-            <div class="border-b border-dashed border-black my-3"></div>
-            
-            <div class="text-xs text-left space-y-1">
-                <div class="flex justify-between">
-                    <span>No. Antrean:</span>
-                    <span id="print-rcpt-ticket" class="font-bold">-</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Kategori:</span>
-                    <span id="print-rcpt-category" class="font-bold">-</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Tanggal:</span>
-                    <span id="print-rcpt-datetime">-</span>
-                </div>
+        <div class="font-mono text-black text-left">
+
+            <!-- Header: Nama Klinik, No. Transaksi, Tanggal -->
+            <div style="text-align:center; width:100%;">
+                <p style="font-size:11px; font-weight:bold; text-transform:uppercase;" id="print-rcpt-clinic-name">Klinik Jaya Medika</p>
+                <p style="font-size:9px; color:#555;" id="print-rcpt-id">No: RCPT-123456</p>
+                <p style="font-size:9px;" id="print-rcpt-datetime">-</p>
             </div>
-            
-            <div class="border-b border-dashed border-black my-3"></div>
-            
-            <!-- Items Table -->
-            <table class="w-full text-xs text-left font-mono">
-                <thead>
-                    <tr class="border-b border-dashed border-black">
-                        <th class="py-1">Item</th>
-                        <th class="py-1 text-center font-bold">Qty</th>
-                        <th class="py-1 text-right font-bold">Harga</th>
-                    </tr>
-                </thead>
+
+            <div class="border-b border-dashed border-black my-2"></div>
+
+            <!-- Info Antrean -->
+            <table class="w-full text-[10px] text-left">
+                <tr>
+                    <td class="text-gray-600 w-24 py-0.5">No. Antrean</td>
+                    <td class="font-bold" id="print-rcpt-ticket">-</td>
+                </tr>
+                <tr>
+                    <td class="text-gray-600 py-0.5">Kategori</td>
+                    <td class="font-bold" id="print-rcpt-category">-</td>
+                </tr>
+            </table>
+
+            <p style="font-size:9px; overflow:hidden; margin:2px 0;">--------------------------------</p>
+
+            <!-- Tabel Item -->
+            <table class="w-full text-[10px] font-mono">
                 <tbody id="print-rcpt-items-body">
                     <!-- Dynamic Items -->
                 </tbody>
             </table>
-            
-            <div class="border-b border-dashed border-black my-3"></div>
-            
-            <div class="text-xs text-right space-y-1 font-bold">
-                <div class="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span id="print-rcpt-subtotal">Rp 0</span>
-                </div>
-                <div class="flex justify-between" id="print-rcpt-discount-row">
-                    <span>Diskon:</span>
-                    <span id="print-rcpt-discount">-Rp 0</span>
-                </div>
-                <div class="flex justify-between" id="print-rcpt-tax-row">
-                    <span>PPN (11%):</span>
-                    <span id="print-rcpt-tax">Rp 0</span>
-                </div>
-                <div class="flex justify-between text-sm border-t border-dashed border-black pt-1">
-                    <span>Total Akhir:</span>
-                    <span id="print-rcpt-total">Rp 0</span>
-                </div>
-            </div>
-            
-            <div class="border-b border-dashed border-black my-3"></div>
-            
-            <div class="text-xs text-left space-y-1">
-                <div class="flex justify-between">
-                    <span>Metode:</span>
-                    <span id="print-rcpt-method">Tunai</span>
-                </div>
-                <div class="flex justify-between" id="print-rcpt-paid-row">
-                    <span>Uang Bayar:</span>
-                    <span id="print-rcpt-paid">Rp 0</span>
-                </div>
-                <div class="flex justify-between" id="print-rcpt-change-row">
-                    <span>Kembalian:</span>
-                    <span id="print-rcpt-change">Rp 0</span>
-                </div>
-            </div>
-            
-            <div class="border-b border-dashed border-black my-3"></div>
-            
-            <p class="text-xs font-bold italic" id="print-rcpt-footer-msg">Lunas / Terima Kasih</p>
-            <p class="text-[9px] text-gray-700 mt-1">Struk ini adalah bukti pembayaran sah.</p>
+
+            <p style="font-size:9px; overflow:hidden; margin:2px 0;">--------------------------------</p>
+
+            <!-- Summary -->
+            <table class="text-[10px]">
+                <tr>
+                    <td class="text-gray-600 py-0.5 pr-2">Subtotal</td>
+                    <td class="py-0.5" id="print-rcpt-subtotal">Rp 0</td>
+                </tr>
+                <tr id="print-rcpt-discount-row">
+                    <td class="text-gray-600 py-0.5 pr-2">Diskon</td>
+                    <td class="py-0.5" id="print-rcpt-discount">-Rp 0</td>
+                </tr>
+                <tr id="print-rcpt-tax-row">
+                    <td class="text-gray-600 py-0.5 pr-2">PPN (11%)</td>
+                    <td class="py-0.5" id="print-rcpt-tax">Rp 0</td>
+                </tr>
+            </table>
+
+            <!-- Total Akhir -->
+            <table class="text-xs font-bold border-t border-b border-dashed border-black my-1 w-full">
+                <tr>
+                    <td class="py-0.5">TOTAL</td>
+                    <td class="py-0.5 pl-2" id="print-rcpt-total">Rp 0</td>
+                </tr>
+            </table>
+
+            <!-- Pembayaran -->
+            <table class="text-[10px]">
+                <tr>
+                    <td class="text-gray-600 py-0.5 pr-2">Metode</td>
+                    <td class="py-0.5 font-bold" id="print-rcpt-method">Tunai</td>
+                </tr>
+                <tr id="print-rcpt-paid-row">
+                    <td class="text-gray-600 py-0.5 pr-2">Uang Bayar</td>
+                    <td class="py-0.5" id="print-rcpt-paid">Rp 0</td>
+                </tr>
+                <tr id="print-rcpt-change-row" class="font-bold">
+                    <td class="py-0.5 pr-2">Kembalian</td>
+                    <td class="py-0.5" id="print-rcpt-change">Rp 0</td>
+                </tr>
+            </table>
+
+            <div class="border-b border-dashed border-black my-2"></div>
+
+            <!-- Footer (center) -->
+            <p style="text-align:center; font-size:9px; font-weight:bold; font-style:italic;" id="print-rcpt-footer-msg">Lunas / Terima Kasih</p>
+
         </div>
     </div>
 
@@ -1288,7 +1288,7 @@
         // --- LIFE CYCLE INITIALIZATION ---
         window.addEventListener('DOMContentLoaded', () => {
             initializeData();
-            const initialTarget = currentUser ? (currentUser.role === 'operator' ? 'operator' : currentUser.role === 'cashier' ? 'cashier' : 'dashboard') : 'kiosk';
+            const initialTarget = currentUser ? (currentUser.role === 'cashier' ? 'cashier' : 'dashboard') : 'kiosk';
             switchView(initialTarget);
             
             // Sync with other open browser tabs/windows (local storage fallback)
@@ -2937,8 +2937,7 @@
 
             // Fill header info
             document.getElementById('print-rcpt-clinic-name').textContent = clinicInfo.name;
-            document.getElementById('print-rcpt-clinic-address').textContent = clinicInfo.address;
-            document.getElementById('print-rcpt-id').textContent = `No. Transaksi: ${tx.id}`;
+            document.getElementById('print-rcpt-id').textContent = `No: ${tx.id}`;
             document.getElementById('print-rcpt-ticket').textContent = tx.ticketNumber;
             document.getElementById('print-rcpt-category').textContent = tx.patientCategory;
             
@@ -2951,11 +2950,15 @@
             tx.items.forEach(item => {
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
-                    <td class="py-1 max-w-[40mm] truncate">${item.name}</td>
-                    <td class="py-1 text-center">${item.qty}</td>
-                    <td class="py-1 text-right">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</td>
+                    <td class="pt-1 text-left">${item.name}</td>
+                    <td class="pt-1 text-right text-gray-600">${item.qty}x</td>
+                `;
+                const tr2 = document.createElement('tr');
+                tr2.innerHTML = `
+                    <td colspan="2" class="pb-1 text-left font-bold border-b border-dotted border-gray-300">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</td>
                 `;
                 body.appendChild(tr);
+                body.appendChild(tr2);
             });
 
             // Pricing Summaries
@@ -3183,10 +3186,6 @@
             if (!userMatch) {
                 if (username === 'admin' && passwordPlain === 'admin123') {
                     userMatch = { username: 'admin', role: 'admin', display_name: 'Dr. Adit (Admin)' };
-                } else if (username === 'operator1' && passwordPlain === 'op123') {
-                    userMatch = { username: 'operator1', role: 'operator', display_name: 'Budi (Operator 1)', counter_name: 'Loket 1' };
-                } else if (username === 'operator2' && passwordPlain === 'op123') {
-                    userMatch = { username: 'operator2', role: 'operator', display_name: 'Siti (Operator 2)', counter_name: 'Loket 2' };
                 } else if (username === 'cashier1' && passwordPlain === 'cash123') {
                     userMatch = { username: 'cashier1', role: 'cashier', display_name: 'Ani (Kasir)' };
                 }
@@ -3200,18 +3199,12 @@
                     counterName: userMatch.counter_name
                 };
                 sessionStorage.setItem('clinic_user', JSON.stringify(currentUser));
-                
-                // If operator has a pre-assigned counter, select it
-                if (currentUser.role === 'operator' && currentUser.counterName) {
-                    opSelectedCounter = currentUser.counterName;
-                    localStorage.setItem('antrian_op_counter', opSelectedCounter);
-                }
 
                 document.getElementById('login-form').reset();
                 if (errorMsg) errorMsg.classList.add('hidden');
                 updateNavigationUI();
                 
-                const target = redirectAfterLogin || (currentUser.role === 'operator' ? 'operator' : currentUser.role === 'cashier' ? 'cashier' : 'dashboard');
+                const target = redirectAfterLogin || (currentUser.role === 'cashier' ? 'cashier' : 'dashboard');
                 redirectAfterLogin = null;
                 switchView(target);
             } else {
@@ -3251,9 +3244,6 @@
                 if (userNameEl) userNameEl.textContent = currentUser.displayName;
                 
                 let roleLabel = currentUser.role.toUpperCase();
-                if (currentUser.role === 'operator') {
-                    roleLabel = `OPERATOR (${opSelectedCounter})`;
-                }
                 if (userRoleEl) userRoleEl.textContent = roleLabel;
             } else {
                 if (profileArea) {
@@ -3305,8 +3295,7 @@
             
             // Role check
             if (currentUser.role === 'admin') return true;
-            if (currentUser.role === 'operator' && viewName === 'operator') return true;
-            if (currentUser.role === 'cashier' && viewName === 'cashier') return true;
+            if (currentUser.role === 'cashier' && ['operator', 'cashier'].includes(viewName)) return true;
             
             return false;
         }
