@@ -342,11 +342,11 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
                     </span>
                     <div>
-                        <p class="font-bold text-sm">Tiket Berhasil Dicetak!</p>
+                        <p class="font-bold text-sm">Nomor Antrean Berhasil Diambil!</p>
                         <p class="text-slate-400 text-xs" id="kiosk-toast-number">Nomor antrean Anda A-001</p>
                     </div>
                 </div>
-                <span class="text-xs text-brand-300 font-bold bg-brand-900/50 px-2 py-1 rounded">MENGHUBUNGKAN PRINTER...</span>
+                <span class="text-xs text-emerald-400 font-bold bg-emerald-900/50 px-2 py-1 rounded">TERDAFTAR</span>
             </div>
         </section>
 
@@ -2034,8 +2034,8 @@
             // Calculate waiting size in front of this ticket
             const waitingCount = queues.filter(q => q.category === category && q.status === 'waiting').length - 1;
 
-            // Trigger physical print page setup
-            triggerPrintLayout(newItem, waitingCount);
+            // Trigger physical print page setup (dimatikan sementara)
+            // triggerPrintLayout(newItem, waitingCount);
 
             // Trigger Kiosk user feedback Toast popup
             const toast = document.getElementById('kiosk-success-toast');
