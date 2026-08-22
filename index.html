@@ -34,10 +34,14 @@
             body * {
                 visibility: hidden;
             }
-            #print-ticket-area, #print-ticket-area * {
+            #print-ticket-area.print-active, #print-ticket-area.print-active * {
                 visibility: visible;
             }
-            #print-ticket-area {
+            #print-receipt-area.print-active, #print-receipt-area.print-active * {
+                visibility: visible;
+            }
+            #print-ticket-area.print-active, #print-receipt-area.print-active {
+                display: block !important;
                 position: absolute;
                 left: 0;
                 top: 0;
@@ -103,6 +107,9 @@
                     <button onclick="switchView('monitor')" id="tab-monitor" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
                         Layar Monitor
                     </button>
+                    <button onclick="switchView('cashier')" id="tab-cashier" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                        Kasir / POS
+                    </button>
                     <button onclick="switchView('settings')" id="tab-settings" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
                         Pengaturan
                     </button>
@@ -115,6 +122,7 @@
                         <option value="kiosk">Kiosk Tiket</option>
                         <option value="operator">Operator Panggil</option>
                         <option value="monitor">Layar Monitor</option>
+                        <option value="cashier">Kasir / POS</option>
                         <option value="settings">Pengaturan</option>
                     </select>
                 </div>
@@ -133,20 +141,25 @@
                     <h2 class="text-2xl md:text-3xl font-bold">Selamat Datang di Portal Antrean</h2>
                     <p class="text-brand-100 mt-2 max-w-xl text-sm md:text-base">Gunakan menu di atas untuk mengoperasikan sistem antrean. Anda dapat menggunakan beberapa tab atau perangkat secara bersamaan untuk Kiosk Tiket, Layar Monitor, dan Layar Panggil.</p>
                 </div>
-                <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 flex gap-4 self-stretch md:self-auto justify-around">
-                    <div class="text-center px-2">
+                <div class="bg-white/10 backdrop-blur-md rounded-xl p-4 flex gap-3 md:gap-4 self-stretch md:self-auto justify-around">
+                    <div class="text-center px-1">
                         <span class="block text-2xl font-bold" id="dash-stat-total">0</span>
-                        <span class="text-xs text-brand-100 font-medium">Total Antrean</span>
+                        <span class="text-[10px] text-brand-100 font-medium">Total</span>
                     </div>
                     <div class="border-l border-white/20"></div>
-                    <div class="text-center px-2">
+                    <div class="text-center px-1">
                         <span class="block text-2xl font-bold" id="dash-stat-waiting">0</span>
-                        <span class="text-xs text-brand-100 font-medium">Menunggu</span>
+                        <span class="text-[10px] text-brand-100 font-medium">Menunggu</span>
                     </div>
                     <div class="border-l border-white/20"></div>
-                    <div class="text-center px-2">
+                    <div class="text-center px-1">
+                        <span class="block text-2xl font-bold text-amber-300" id="dash-stat-payment">0</span>
+                        <span class="text-[10px] text-brand-100 font-medium">Ke Kasir</span>
+                    </div>
+                    <div class="border-l border-white/20"></div>
+                    <div class="text-center px-1">
                         <span class="block text-2xl font-bold text-emerald-300" id="dash-stat-completed">0</span>
-                        <span class="text-xs text-brand-100 font-medium">Selesai</span>
+                        <span class="text-[10px] text-brand-100 font-medium">Selesai</span>
                     </div>
                 </div>
             </div>
@@ -548,6 +561,27 @@
                 </div>
             </div>
 
+            <!-- Products / Services catalogue configuration -->
+            <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4">Pengaturan Katalog Produk & Layanan</h3>
+                
+                <div class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <input type="text" id="settings-new-product-name" placeholder="Nama Layanan / Obat (Contoh: Konsultasi Gigi)" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                        <div class="flex gap-2">
+                            <input type="number" id="settings-new-product-price" placeholder="Harga (Contoh: 120000)" class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition flex-grow">
+                            <button onclick="addNewProduct()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-5 rounded-xl text-sm transition whitespace-nowrap">
+                                Tambah Produk
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="border border-slate-100 rounded-xl divide-y divide-slate-100 max-h-[300px] overflow-y-auto" id="settings-products-list">
+                        <!-- Products will list here -->
+                    </div>
+                </div>
+            </div>
+
             <!-- Pengaturan Suara Panggilan (TTS) -->
             <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
                 <h3 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4">Pengaturan Suara Panggilan (TTS)</h3>
@@ -586,6 +620,194 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4.5 w-4.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 1121.21 8H18.2" /></svg>
                         Buat Data Simulasi (Mock Antrean)
                     </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 6. CASHIER / POS VIEW -->
+        <section id="view-cashier" class="hidden space-y-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Left Panel: Billing Transaction Workspace -->
+                <div class="lg:col-span-2 bg-white border border-brand-100 rounded-2xl p-6 shadow-sm flex flex-col justify-between min-h-[500px]">
+                    <!-- Empty State -->
+                    <div id="cashier-empty-state" class="flex-grow flex flex-col items-center justify-center py-20 text-slate-400">
+                        <div class="bg-brand-50 p-4 rounded-full text-brand-500 mb-4">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2zm7-5a2 2 0 11-4 0 2 2 0 014 0z" />
+                            </svg>
+                        </div>
+                        <h4 class="font-extrabold text-slate-700 text-lg">Kasir Klinik Sehat</h4>
+                        <p class="text-xs text-slate-400 mt-1 max-w-xs text-center">Silakan pilih pasien di daftar antrean pembayaran (sebelah kanan) untuk mulai memproses pembayaran tagihan.</p>
+                    </div>
+
+                    <!-- Active Transaction Billing Workspace -->
+                    <div id="cashier-active-workspace" class="hidden flex-grow flex flex-col justify-between space-y-6">
+                        <!-- Patient Header Info -->
+                        <div class="border-b border-slate-100 pb-4 flex flex-wrap justify-between items-center gap-2">
+                            <div>
+                                <span class="text-xs font-bold text-slate-400 uppercase tracking-wider block">PASIEN TAGIHAN</span>
+                                <div class="flex items-center gap-2 mt-1">
+                                    <h3 class="text-2xl font-black text-brand-900" id="cashier-patient-ticket">-</h3>
+                                    <span class="text-xs font-bold px-2 py-0.5 rounded-full" id="cashier-patient-category">-</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <span class="text-xs text-slate-400 block font-semibold" id="cashier-patient-time">Masuk: -</span>
+                            </div>
+                        </div>
+
+                        <!-- Add Item Controls -->
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-100 space-y-3">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider">Tambah Item Layanan / Obat</h4>
+                            
+                            <!-- Catalogue Select -->
+                            <div class="flex gap-2">
+                                <select id="cashier-product-select" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 flex-grow">
+                                    <!-- Populated dynamically -->
+                                </select>
+                                <button onclick="addSelectedProduct()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition">
+                                    Tambah
+                                </button>
+                            </div>
+
+                            <!-- Custom Item Add -->
+                            <div class="flex flex-wrap md:flex-nowrap gap-2 pt-2 border-t border-slate-200/60">
+                                <input type="text" id="cashier-custom-name" placeholder="Item Kustom (Contoh: Salep Kulit)" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 flex-grow">
+                                <input type="number" id="cashier-custom-price" placeholder="Harga (Rp)" class="bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 w-32">
+                                <button onclick="addCustomProduct()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2 rounded-lg text-sm transition whitespace-nowrap">
+                                    + Kustom
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Cart Table -->
+                        <div class="flex-grow overflow-x-auto">
+                            <table class="w-full text-sm text-left text-slate-600">
+                                <thead class="text-xs text-slate-400 font-bold uppercase border-b border-slate-100">
+                                    <tr>
+                                        <th class="py-2">Nama Layanan/Obat</th>
+                                        <th class="py-2 text-center">Harga</th>
+                                        <th class="py-2 text-center">Qty</th>
+                                        <th class="py-2 text-right">Subtotal</th>
+                                        <th class="py-2 text-center">Aksi</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="cashier-cart-body" class="divide-y divide-slate-100">
+                                    <!-- Dynamic Cart Rows -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Bill Summary & Calculation -->
+                        <div class="bg-slate-50 p-5 rounded-2xl border border-slate-100 grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Left: Discount & Tax Checkbox -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="cashier-discount" class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Diskon (Rupiah)</label>
+                                    <div class="relative">
+                                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-400 font-bold text-sm">Rp</span>
+                                        <input type="number" id="cashier-discount" value="0" oninput="calculateBillingTotals()" class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-brand-500">
+                                    </div>
+                                </div>
+                                <div class="flex items-center space-x-2 bg-white px-4 py-2.5 rounded-xl border border-slate-200/60 shadow-sm">
+                                    <input type="checkbox" id="cashier-tax-toggle" onchange="calculateBillingTotals()" class="w-4.5 h-4.5 rounded text-brand-600 focus:ring-brand-500 border-slate-300">
+                                    <label for="cashier-tax-toggle" class="text-xs text-slate-700 font-semibold cursor-pointer">Terapkan PPN (11%)</label>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Metode Pembayaran</label>
+                                    <select id="cashier-payment-method" onchange="changePaymentMethod(this.value)" class="w-full bg-white border border-slate-200 rounded-xl px-3 py-2 text-sm font-bold text-slate-800 focus:outline-none focus:border-brand-500">
+                                        <option value="Tunai">Tunai (Cash)</option>
+                                        <option value="QRIS">QRIS</option>
+                                        <option value="Kartu Debit">Kartu Debit</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Right: Calculations totals -->
+                            <div class="flex flex-col justify-between space-y-3 text-sm font-semibold text-slate-600">
+                                <div class="flex justify-between">
+                                    <span>Subtotal:</span>
+                                    <span id="cashier-summary-subtotal" class="font-bold text-slate-800">Rp 0</span>
+                                </div>
+                                <div class="flex justify-between text-red-500">
+                                    <span>Diskon:</span>
+                                    <span id="cashier-summary-discount" class="font-bold">-Rp 0</span>
+                                </div>
+                                <div class="flex justify-between">
+                                    <span>PPN (11%):</span>
+                                    <span id="cashier-summary-tax" class="font-bold text-slate-800">Rp 0</span>
+                                </div>
+                                <div class="flex justify-between text-base font-black text-slate-800 border-t border-slate-200/80 pt-2">
+                                    <span>Total Tagihan:</span>
+                                    <span id="cashier-summary-total" class="text-brand-700 text-lg">Rp 0</span>
+                                </div>
+
+                                <!-- Cash Received & Change for Tunai -->
+                                <div id="cashier-cash-received-section" class="pt-2 space-y-2 border-t border-dashed border-slate-200">
+                                    <div class="flex justify-between items-center">
+                                        <label for="cashier-cash-paid" class="text-xs font-bold text-slate-400 uppercase tracking-wider">Uang Diterima</label>
+                                        <input type="number" id="cashier-cash-paid" oninput="calculateBillingTotals()" class="w-32 bg-white border border-slate-200 rounded-lg px-2 py-1 text-sm font-bold text-slate-800 text-right focus:outline-none focus:border-brand-500">
+                                    </div>
+                                    
+                                    <!-- Quick Cash Shortcuts -->
+                                    <div class="flex justify-end gap-1.5 flex-wrap">
+                                        <button onclick="setQuickCash(0)" class="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-bold transition">Uang Pas</button>
+                                        <button onclick="setQuickCash(50000)" class="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-bold transition">50k</button>
+                                        <button onclick="setQuickCash(100000)" class="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-bold transition">100k</button>
+                                        <button onclick="setQuickCash(200000)" class="text-[10px] bg-slate-200 hover:bg-slate-300 text-slate-700 px-2 py-0.5 rounded font-bold transition">200k</button>
+                                    </div>
+
+                                    <div class="flex justify-between text-base font-black text-slate-800 border-t border-slate-200 pt-2" id="cashier-change-row">
+                                        <span>Kembalian:</span>
+                                        <span id="cashier-summary-change" class="text-emerald-600">Rp 0</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="flex gap-4">
+                            <button onclick="cancelBilling()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl text-sm transition">
+                                Batalkan / Deselect
+                            </button>
+                            <button id="btn-cashier-pay" onclick="processPayment()" class="flex-grow flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                                </svg>
+                                Proses Bayar & Cetak Struk
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Panels: Waiting List & Today's History -->
+                <div class="space-y-6">
+                    <!-- Waiting payment list -->
+                    <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm flex flex-col h-[320px]">
+                        <h3 class="font-bold text-brand-950 text-base mb-4 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Antrean Menunggu Pembayaran
+                            <span class="bg-amber-100 text-amber-800 text-[10px] px-2 py-0.5 rounded-full" id="cashier-wait-badge">0</span>
+                        </h3>
+                        <div id="cashier-queue-list" class="flex-grow overflow-y-auto space-y-2 pr-1">
+                            <!-- Render waiting list items dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Today's Transaction History -->
+                    <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm flex flex-col h-[320px]">
+                        <h3 class="font-bold text-brand-950 text-base mb-4 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-emerald-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                            </svg>
+                            Riwayat Transaksi Hari Ini
+                        </h3>
+                        <div id="cashier-history-list" class="flex-grow overflow-y-auto space-y-2 pr-1">
+                            <!-- Render history transactions dynamically -->
+                        </div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -631,6 +853,94 @@
         </div>
     </div>
 
+    <!-- PRINT RECEIPT CONTAINER (HIDDEN ON SCREEN, DESIGNED FOR 80mm THERMAL RECEIPT) -->
+    <div id="print-receipt-area" class="hidden">
+        <div class="text-center font-mono text-black">
+            <h1 class="text-lg font-bold tracking-tight uppercase" id="print-rcpt-clinic-name">KLINIK SEHAT UTAMA</h1>
+            <p class="text-xs mt-1" id="print-rcpt-clinic-address">Jl. Kesehatan Indah No. 123, Bandung</p>
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <p class="text-sm font-bold tracking-wider">STRUK PEMBAYARAN / POS</p>
+            <p class="text-[10px] text-gray-700 font-bold" id="print-rcpt-id">No. Transaksi: RCPT-123456</p>
+            
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <div class="text-xs text-left space-y-1">
+                <div class="flex justify-between">
+                    <span>No. Antrean:</span>
+                    <span id="print-rcpt-ticket" class="font-bold">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Kategori:</span>
+                    <span id="print-rcpt-category" class="font-bold">-</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Tanggal:</span>
+                    <span id="print-rcpt-datetime">-</span>
+                </div>
+            </div>
+            
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <!-- Items Table -->
+            <table class="w-full text-xs text-left font-mono">
+                <thead>
+                    <tr class="border-b border-dashed border-black">
+                        <th class="py-1">Item</th>
+                        <th class="py-1 text-center font-bold">Qty</th>
+                        <th class="py-1 text-right font-bold">Harga</th>
+                    </tr>
+                </thead>
+                <tbody id="print-rcpt-items-body">
+                    <!-- Dynamic Items -->
+                </tbody>
+            </table>
+            
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <div class="text-xs text-right space-y-1 font-bold">
+                <div class="flex justify-between">
+                    <span>Subtotal:</span>
+                    <span id="print-rcpt-subtotal">Rp 0</span>
+                </div>
+                <div class="flex justify-between" id="print-rcpt-discount-row">
+                    <span>Diskon:</span>
+                    <span id="print-rcpt-discount">-Rp 0</span>
+                </div>
+                <div class="flex justify-between" id="print-rcpt-tax-row">
+                    <span>PPN (11%):</span>
+                    <span id="print-rcpt-tax">Rp 0</span>
+                </div>
+                <div class="flex justify-between text-sm border-t border-dashed border-black pt-1">
+                    <span>Total Akhir:</span>
+                    <span id="print-rcpt-total">Rp 0</span>
+                </div>
+            </div>
+            
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <div class="text-xs text-left space-y-1">
+                <div class="flex justify-between">
+                    <span>Metode:</span>
+                    <span id="print-rcpt-method">Tunai</span>
+                </div>
+                <div class="flex justify-between" id="print-rcpt-paid-row">
+                    <span>Uang Bayar:</span>
+                    <span id="print-rcpt-paid">Rp 0</span>
+                </div>
+                <div class="flex justify-between" id="print-rcpt-change-row">
+                    <span>Kembalian:</span>
+                    <span id="print-rcpt-change">Rp 0</span>
+                </div>
+            </div>
+            
+            <div class="border-b border-dashed border-black my-3"></div>
+            
+            <p class="text-xs font-bold italic" id="print-rcpt-footer-msg">Lunas / Terima Kasih</p>
+            <p class="text-[9px] text-gray-700 mt-1">Struk ini adalah bukti pembayaran sah.</p>
+        </div>
+    </div>
+
     <!-- CUSTOM MARQUEE TAILWIND EXTRA STYLES -->
     <style>
         @keyframes marquee {
@@ -659,6 +969,27 @@
         let counters = JSON.parse(localStorage.getItem('antrian_counters')) || DEFAULT_COUNTERS;
         let queues = JSON.parse(localStorage.getItem('antrian_queues')) || [];
         
+        // POS / Cashier Database
+        const DEFAULT_PRODUCTS = [
+            { id: 1, name: "Konsultasi Dokter Umum", price: 50000 },
+            { id: 2, name: "Konsultasi Dokter Spesialis", price: 100000 },
+            { id: 3, name: "Obat Parasetamol 500mg (Strip)", price: 10000 },
+            { id: 4, name: "Obat Amoksisilin 500mg (Strip)", price: 15000 },
+            { id: 5, name: "Obat Sirup Batuk & Flu", price: 25000 },
+            { id: 6, name: "Pemeriksaan Gula Darah", price: 30000 },
+            { id: 7, name: "Pemeriksaan Asam Urat", price: 35000 },
+            { id: 8, name: "Pemeriksaan Kolesterol", price: 45000 },
+            { id: 9, name: "Jasa Tindakan Medis Ringan", price: 75000 }
+        ];
+
+        let products = JSON.parse(localStorage.getItem('antrian_products')) || DEFAULT_PRODUCTS;
+        let transactions = JSON.parse(localStorage.getItem('antrian_transactions')) || [];
+        
+        let activeBillingPatient = null;
+        let billingItems = [];
+        let billingDiscount = 0;
+        let billingTaxEnabled = false;
+
         // Session states
         let currentView = 'dashboard';
         let opSelectedCounter = localStorage.getItem('antrian_op_counter') || counters[0] || 'Loket 1';
@@ -684,6 +1015,13 @@
                     counters = JSON.parse(event.newValue) || DEFAULT_COUNTERS;
                     updateCounterOptions();
                     updateUI();
+                } else if (event.key === 'antrian_products') {
+                    products = JSON.parse(event.newValue) || DEFAULT_PRODUCTS;
+                    if (currentView === 'cashier') renderCashierWorkspace();
+                    if (currentView === 'settings') renderProductsSettings();
+                } else if (event.key === 'antrian_transactions') {
+                    transactions = JSON.parse(event.newValue) || [];
+                    if (currentView === 'cashier') renderCashierWorkspace();
                 } else if (event.key === 'antrian_active_call_trigger') {
                     // Triggers when a counter panggil/recall something
                     const callDetail = JSON.parse(event.newValue);
@@ -716,6 +1054,12 @@
             if (!localStorage.getItem('antrian_queues')) {
                 localStorage.setItem('antrian_queues', JSON.stringify([]));
             }
+            if (!localStorage.getItem('antrian_products')) {
+                localStorage.setItem('antrian_products', JSON.stringify(DEFAULT_PRODUCTS));
+            }
+            if (!localStorage.getItem('antrian_transactions')) {
+                localStorage.setItem('antrian_transactions', JSON.stringify([]));
+            }
             
             updateCounterOptions();
             updateUI();
@@ -731,12 +1075,13 @@
             document.getElementById('view-operator').classList.add('hidden');
             document.getElementById('view-monitor').classList.add('hidden');
             document.getElementById('view-settings').classList.add('hidden');
+            document.getElementById('view-cashier').classList.add('hidden');
 
             // Show target view
             document.getElementById(`view-${viewName}`).classList.remove('hidden');
 
             // Update Tab styles (Desktop navbar)
-            const tabs = ['dashboard', 'kiosk', 'operator', 'monitor', 'settings'];
+            const tabs = ['dashboard', 'kiosk', 'operator', 'monitor', 'cashier', 'settings'];
             tabs.forEach(tab => {
                 const el = document.getElementById(`tab-${tab}`);
                 if (tab === viewName) {
@@ -756,6 +1101,11 @@
                 document.getElementById('settings-clinic-footer').value = clinicInfo.footer;
                 renderSettingsCountersList();
                 populateVoiceList();
+                renderProductsSettings();
+            }
+
+            if (viewName === 'cashier') {
+                renderCashierWorkspace();
             }
 
             // Sync page data when active
@@ -783,10 +1133,12 @@
             // Calculate basic stats
             const total = queues.length;
             const waiting = queues.filter(q => q.status === 'waiting').length;
+            const waitingPayment = queues.filter(q => q.status === 'waiting_payment').length;
             const completed = queues.filter(q => q.status === 'completed').length;
             
             document.getElementById('dash-stat-total').textContent = total;
             document.getElementById('dash-stat-waiting').textContent = waiting;
+            document.getElementById('dash-stat-payment').textContent = waitingPayment;
             document.getElementById('dash-stat-completed').textContent = completed;
 
             // Kategori UMUM (A) statistics
@@ -935,10 +1287,10 @@
 
         // Operator triggers calling
         function callNextQueue(category) {
-            // Selesai-kan antrean aktif sebelumnya di loket ini jika ada
+            // Selesai-kan antrean aktif sebelumnya di loket ini jika ada dan arahkan ke kasir
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (activeCall) {
-                activeCall.status = 'completed';
+                activeCall.status = 'waiting_payment';
             }
 
             // Ambil nomor antrean waiting tertua untuk kategori terpilih
@@ -972,7 +1324,7 @@
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (!activeCall) return;
 
-            activeCall.status = 'completed';
+            activeCall.status = 'waiting_payment';
             saveQueues();
             updateUI();
         }
@@ -1055,7 +1407,7 @@
             const historyList = document.getElementById('mon-history-list');
             historyList.innerHTML = '';
 
-            const historyItems = queues.filter(q => q.status === 'called' || q.status === 'completed');
+            const historyItems = queues.filter(q => q.status === 'called' || q.status === 'waiting_payment' || q.status === 'completed');
             historyItems.sort((a, b) => new Date(b.calledAt) - new Date(a.calledAt));
             
             // Slice top 5 history
@@ -1270,6 +1622,9 @@
         }
 
         function triggerPrintLayout(item, waitCount) {
+            const printArea = document.getElementById('print-ticket-area');
+            if (!printArea) return;
+
             // Fill thermal layout info
             document.getElementById('print-clinic-name').textContent = clinicInfo.name;
             document.getElementById('print-clinic-address').textContent = clinicInfo.address;
@@ -1283,9 +1638,15 @@
             document.getElementById('print-datetime').textContent = datetimeStr;
             document.getElementById('print-wait-count').textContent = `${waitCount} Orang`;
 
+            // Activate print area
+            printArea.classList.add('print-active');
+
             // Call browser native window print trigger
             setTimeout(() => {
                 window.print();
+                setTimeout(() => {
+                    printArea.classList.remove('print-active');
+                }, 500);
             }, 250);
         }
 
@@ -1458,17 +1819,23 @@
 
         // Reset database
         function confirmReset() {
-            if (confirm('PERINGATAN! Anda akan menghapus seluruh data antrean saat ini dan mengulang nomor ke 0. Lanjutkan?')) {
+            if (confirm('PERINGATAN! Anda akan menghapus seluruh data antrean dan riwayat transaksi saat ini. Lanjutkan?')) {
                 queues = [];
+                transactions = [];
+                activeBillingPatient = null;
+                billingItems = [];
                 saveQueues();
+                localStorage.setItem('antrian_transactions', JSON.stringify([]));
                 updateUI();
-                alert('Seluruh data antrean berhasil di-reset.');
+                if (currentView === 'cashier') renderCashierWorkspace();
+                alert('Seluruh data antrean dan transaksi berhasil di-reset.');
             }
         }
 
         // Mock database generation for visual simulation demo
         function generateMockData() {
             queues = [];
+            transactions = [];
             const categories = ['UMUM', 'BPJS'];
             const prefixes = { 'UMUM': 'A', 'BPJS': 'B' };
             const timeOffset = new Date().getTime();
@@ -1478,25 +1845,56 @@
                 const cat = categories[Math.floor(Math.random() * 2)];
                 const pref = prefixes[cat];
                 const activeNum = queues.filter(q => q.category === cat).length + 1;
+                const queueId = timeOffset - (20 - i) * 60000;
+                const ticketNumber = `${pref}-${String(activeNum).padStart(3, '0')}`;
                 
                 queues.push({
-                    id: timeOffset - (20 - i) * 60000,
+                    id: queueId,
                     category: cat,
                     prefix: pref,
                     number: activeNum,
-                    formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
+                    formattedNumber: ticketNumber,
                     status: 'completed',
                     createdAt: new Date(timeOffset - (20 - i) * 60000).toISOString(),
                     calledAt: new Date(timeOffset - (18 - i) * 60000).toISOString(),
-                    counter: counters[Math.floor(Math.random() * counters.length)]
+                    counter: counters[Math.floor(Math.random() * counters.length)],
+                    paidAt: new Date(timeOffset - (16 - i) * 60000).toISOString()
+                });
+
+                // Generate a corresponding mock transaction
+                const randMethod = ['Tunai', 'QRIS', 'Kartu Debit'][Math.floor(Math.random() * 3)];
+                const txItems = [
+                    { id: 1, name: "Konsultasi Dokter Umum", price: 50000, qty: 1 },
+                    { id: 3, name: "Obat Parasetamol 500mg (Strip)", price: 10000, qty: Math.floor(Math.random() * 2) + 1 }
+                ];
+                const subtotal = txItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+                const discount = Math.random() > 0.5 ? 5000 : 0;
+                const tax = Math.round((subtotal - discount) * 0.11);
+                const total = subtotal - discount + tax;
+
+                transactions.push({
+                    id: 'TX-' + (queueId + 1000),
+                    queueId: queueId,
+                    ticketNumber: ticketNumber,
+                    patientCategory: cat,
+                    items: txItems,
+                    subtotal: subtotal,
+                    discount: discount,
+                    tax: tax,
+                    total: total,
+                    paymentMethod: randMethod,
+                    amountPaid: randMethod === 'Tunai' ? Math.ceil(total / 50000) * 50000 : total,
+                    change: randMethod === 'Tunai' ? (Math.ceil(total / 50000) * 50000) - total : 0,
+                    createdAt: new Date(timeOffset - (16 - i) * 60000).toISOString()
                 });
             }
 
-            // Generate active called statuses
+            // Generate active called or waiting_payment statuses
             counters.forEach((cnt, idx) => {
                 const cat = idx % 2 === 0 ? 'UMUM' : 'BPJS';
                 const pref = prefixes[cat];
                 const activeNum = queues.filter(q => q.category === cat).length + 1;
+                const status = idx === 0 ? 'waiting_payment' : 'called'; // First one is waiting in cashier
 
                 queues.push({
                     id: timeOffset - (3 - idx) * 60000,
@@ -1504,7 +1902,7 @@
                     prefix: pref,
                     number: activeNum,
                     formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
-                    status: 'called',
+                    status: status,
                     createdAt: new Date(timeOffset - (10 - idx) * 60000).toISOString(),
                     calledAt: new Date(timeOffset - (3 - idx) * 60000).toISOString(),
                     counter: cnt
@@ -1531,13 +1929,554 @@
             }
 
             saveQueues();
+            localStorage.setItem('antrian_transactions', JSON.stringify(transactions));
             updateUI();
-            alert('Berhasil menghasilkan data simulasi antrean.');
+            if (currentView === 'cashier') renderCashierWorkspace();
+            alert('Berhasil menghasilkan data simulasi antrean dan transaksi kasir.');
         }
 
         // Save helper
         function saveQueues() {
             localStorage.setItem('antrian_queues', JSON.stringify(queues));
+        }
+
+        // --- CASHIER / POS BUSINESS LOGIC & RENDERING ---
+        function renderCashierWorkspace() {
+            // Render waiting list
+            const waitListContainer = document.getElementById('cashier-queue-list');
+            const waitBadge = document.getElementById('cashier-wait-badge');
+            
+            const waitingPaymentQueues = queues.filter(q => q.status === 'waiting_payment');
+            waitBadge.textContent = waitingPaymentQueues.length;
+            waitListContainer.innerHTML = '';
+            
+            if (waitingPaymentQueues.length === 0) {
+                waitListContainer.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        Tidak ada antrean menunggu pembayaran.
+                    </div>
+                `;
+            } else {
+                waitingPaymentQueues.forEach(q => {
+                    const item = document.createElement('button');
+                    item.onclick = () => selectBillingPatient(q);
+                    
+                    const isActive = activeBillingPatient && activeBillingPatient.id === q.id;
+                    const activeClass = isActive 
+                        ? 'border-brand-500 bg-brand-50 shadow-sm' 
+                        : 'border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm';
+                    
+                    item.className = `w-full text-left p-3 rounded-xl border flex items-center justify-between transition ${activeClass}`;
+                    
+                    const badgeColor = q.category === 'UMUM' ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-100 text-brand-800';
+                    const calledTime = q.calledAt 
+                        ? new Date(q.calledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) 
+                        : '-';
+
+                    item.innerHTML = `
+                        <div class="flex items-center gap-3">
+                            <span class="text-base font-extrabold text-slate-800">${q.formattedNumber}</span>
+                            <span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeColor}">${q.category}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs font-bold text-slate-600 block">${q.counter || 'Loket'}</span>
+                            <span class="text-[10px] text-slate-400">Panggil: ${calledTime} WIB</span>
+                        </div>
+                    `;
+                    waitListContainer.appendChild(item);
+                });
+            }
+
+            // Render Product Select catalogue options
+            const prodSelect = document.getElementById('cashier-product-select');
+            prodSelect.innerHTML = '<option value="">-- Pilih Layanan / Obat dari Katalog --</option>';
+            products.forEach(p => {
+                const opt = document.createElement('option');
+                opt.value = p.id;
+                opt.textContent = `${p.name} - Rp ${p.price.toLocaleString('id-ID')}`;
+                prodSelect.appendChild(opt);
+            });
+
+            // Toggle Workspace vs Empty State
+            const emptyState = document.getElementById('cashier-empty-state');
+            const activeWorkspace = document.getElementById('cashier-active-workspace');
+            
+            if (activeBillingPatient) {
+                emptyState.classList.add('hidden');
+                activeWorkspace.classList.remove('hidden');
+                
+                document.getElementById('cashier-patient-ticket').textContent = activeBillingPatient.formattedNumber;
+                
+                const badgeColor = activeBillingPatient.category === 'UMUM' ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-100 text-brand-800';
+                const catBadge = document.getElementById('cashier-patient-category');
+                catBadge.textContent = activeBillingPatient.category;
+                catBadge.className = `text-xs font-bold px-2 py-0.5 rounded-full ${badgeColor}`;
+                
+                const startTime = activeBillingPatient.createdAt 
+                    ? new Date(activeBillingPatient.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) 
+                    : '-';
+                document.getElementById('cashier-patient-time').textContent = `Masuk Kiosk: ${startTime} WIB`;
+                
+                renderBillingCart();
+            } else {
+                emptyState.classList.remove('hidden');
+                activeWorkspace.classList.add('hidden');
+            }
+
+            // Render history transactions
+            renderTransactionsHistory();
+        }
+
+        function selectBillingPatient(queueItem) {
+            activeBillingPatient = queueItem;
+            billingItems = [];
+            
+            // Pre-populate with default Consultation fee depending on category
+            let defaultCons = products.find(p => p.name.toLowerCase().includes("konsultasi") && p.name.toLowerCase().includes(queueItem.category.toLowerCase()));
+            if (!defaultCons) {
+                defaultCons = products.find(p => p.name.toLowerCase().includes("konsultasi"));
+            }
+            if (defaultCons) {
+                billingItems.push({
+                    id: defaultCons.id,
+                    name: defaultCons.name,
+                    price: defaultCons.price,
+                    qty: 1
+                });
+            }
+            
+            billingDiscount = 0;
+            document.getElementById('cashier-discount').value = 0;
+            
+            billingTaxEnabled = false;
+            document.getElementById('cashier-tax-toggle').checked = false;
+            
+            document.getElementById('cashier-payment-method').value = 'Tunai';
+            document.getElementById('cashier-cash-paid').value = '';
+            document.getElementById('cashier-cash-received-section').classList.remove('hidden');
+            
+            renderCashierWorkspace();
+        }
+
+        function cancelBilling() {
+            activeBillingPatient = null;
+            billingItems = [];
+            renderCashierWorkspace();
+        }
+
+        function addSelectedProduct() {
+            const selectEl = document.getElementById('cashier-product-select');
+            const prodId = parseInt(selectEl.value);
+            if (!prodId) return;
+            
+            const prod = products.find(p => p.id === prodId);
+            if (!prod) return;
+            
+            const existing = billingItems.find(item => item.id === prod.id);
+            if (existing) {
+                existing.qty += 1;
+            } else {
+                billingItems.push({
+                    id: prod.id,
+                    name: prod.name,
+                    price: prod.price,
+                    qty: 1
+                });
+            }
+            
+            selectEl.value = '';
+            renderBillingCart();
+        }
+
+        function addCustomProduct() {
+            const nameInput = document.getElementById('cashier-custom-name');
+            const priceInput = document.getElementById('cashier-custom-price');
+            const name = nameInput.value.trim();
+            const price = parseInt(priceInput.value.trim());
+
+            if (!name || isNaN(price) || price < 0) {
+                alert('Nama item kustom dan harga harus diisi dengan benar!');
+                return;
+            }
+
+            const id = new Date().getTime(); // unique temp ID
+            billingItems.push({
+                id: id,
+                name: name,
+                price: price,
+                qty: 1
+            });
+
+            nameInput.value = '';
+            priceInput.value = '';
+            renderBillingCart();
+        }
+
+        function updateItemQty(index, delta) {
+            billingItems[index].qty += delta;
+            if (billingItems[index].qty <= 0) {
+                billingItems.splice(index, 1);
+            }
+            renderBillingCart();
+        }
+
+        function removeBillingItem(index) {
+            billingItems.splice(index, 1);
+            renderBillingCart();
+        }
+
+        function renderBillingCart() {
+            const container = document.getElementById('cashier-cart-body');
+            container.innerHTML = '';
+
+            if (billingItems.length === 0) {
+                container.innerHTML = `
+                    <tr>
+                        <td colspan="5" class="text-center py-6 text-slate-400 text-xs font-semibold">
+                            Belum ada item tagihan. Silakan tambah item di atas.
+                        </td>
+                    </tr>
+                `;
+                calculateBillingTotals();
+                return;
+            }
+
+            billingItems.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 border-b border-slate-100 text-xs";
+                
+                const itemTotal = item.price * item.qty;
+                
+                tr.innerHTML = `
+                    <td class="py-2.5 font-bold text-slate-800">${item.name}</td>
+                    <td class="py-2.5 text-center">Rp ${item.price.toLocaleString('id-ID')}</td>
+                    <td class="py-2.5 text-center">
+                        <div class="flex items-center justify-center gap-1.5">
+                            <button onclick="updateItemQty(${index}, -1)" class="w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-200 font-black text-slate-600 transition">-</button>
+                            <span class="w-6 text-center font-bold text-slate-800">${item.qty}</span>
+                            <button onclick="updateItemQty(${index}, 1)" class="w-5 h-5 rounded-full bg-slate-100 hover:bg-slate-200 font-black text-slate-600 transition">+</button>
+                        </div>
+                    </td>
+                    <td class="py-2.5 text-right font-bold text-slate-800">Rp ${itemTotal.toLocaleString('id-ID')}</td>
+                    <td class="py-2.5 text-center">
+                        <button onclick="removeBillingItem(${index})" class="text-red-500 hover:text-red-700 font-bold">Hapus</button>
+                    </td>
+                `;
+                container.appendChild(tr);
+            });
+
+            calculateBillingTotals();
+        }
+
+        function changePaymentMethod(val) {
+            const receivedSection = document.getElementById('cashier-cash-received-section');
+            if (val === 'Tunai') {
+                receivedSection.classList.remove('hidden');
+                document.getElementById('cashier-cash-paid').value = '';
+            } else {
+                receivedSection.classList.add('hidden');
+            }
+            calculateBillingTotals();
+        }
+
+        function setQuickCash(amount) {
+            const subtotal = billingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const discountInput = parseInt(document.getElementById('cashier-discount').value) || 0;
+            const taxToggle = document.getElementById('cashier-tax-toggle').checked;
+            const tax = taxToggle ? Math.round((subtotal - discountInput) * 0.11) : 0;
+            const total = subtotal - discountInput + tax;
+
+            if (amount === 0) {
+                document.getElementById('cashier-cash-paid').value = total > 0 ? total : 0;
+            } else {
+                document.getElementById('cashier-cash-paid').value = amount;
+            }
+            calculateBillingTotals();
+        }
+
+        function calculateBillingTotals() {
+            const subtotal = billingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const discountInput = parseInt(document.getElementById('cashier-discount').value) || 0;
+            const taxToggle = document.getElementById('cashier-tax-toggle').checked;
+            
+            billingDiscount = discountInput;
+            billingTaxEnabled = taxToggle;
+
+            const tax = taxToggle ? Math.round((subtotal - discountInput) * 0.11) : 0;
+            const total = Math.max(0, subtotal - discountInput + tax);
+
+            document.getElementById('cashier-summary-subtotal').textContent = `Rp ${subtotal.toLocaleString('id-ID')}`;
+            document.getElementById('cashier-summary-discount').textContent = `-Rp ${discountInput.toLocaleString('id-ID')}`;
+            document.getElementById('cashier-summary-tax').textContent = `Rp ${tax.toLocaleString('id-ID')}`;
+            document.getElementById('cashier-summary-total').textContent = `Rp ${total.toLocaleString('id-ID')}`;
+
+            const method = document.getElementById('cashier-payment-method').value;
+            if (method === 'Tunai') {
+                const paid = parseInt(document.getElementById('cashier-cash-paid').value) || 0;
+                const change = Math.max(0, paid - total);
+                document.getElementById('cashier-summary-change').textContent = `Rp ${change.toLocaleString('id-ID')}`;
+                
+                const btnPay = document.getElementById('btn-cashier-pay');
+                if (paid < total && total > 0) {
+                    btnPay.disabled = true;
+                    btnPay.className = "flex-grow flex-1 bg-slate-100 text-slate-400 py-3 px-4 rounded-xl font-bold text-sm cursor-not-allowed flex items-center justify-center gap-2";
+                } else {
+                    btnPay.disabled = false;
+                    btnPay.className = "flex-grow flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md";
+                }
+            } else {
+                const btnPay = document.getElementById('btn-cashier-pay');
+                btnPay.disabled = false;
+                btnPay.className = "flex-grow flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 px-4 rounded-xl text-sm transition flex items-center justify-center gap-2 shadow-md";
+            }
+        }
+
+        function processPayment() {
+            if (!activeBillingPatient) return;
+            if (billingItems.length === 0) {
+                alert('Item tagihan tidak boleh kosong!');
+                return;
+            }
+
+            const subtotal = billingItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const tax = billingTaxEnabled ? Math.round((subtotal - billingDiscount) * 0.11) : 0;
+            const total = Math.max(0, subtotal - billingDiscount + tax);
+            
+            const method = document.getElementById('cashier-payment-method').value;
+            let paid = total;
+            let change = 0;
+
+            if (method === 'Tunai') {
+                paid = parseInt(document.getElementById('cashier-cash-paid').value) || 0;
+                if (paid < total && total > 0) {
+                    alert('Uang pembayaran kurang!');
+                    return;
+                }
+                change = paid - total;
+            }
+
+            const transactionId = 'TX-' + new Date().getTime();
+            
+            const newTx = {
+                id: transactionId,
+                queueId: activeBillingPatient.id,
+                ticketNumber: activeBillingPatient.formattedNumber,
+                patientCategory: activeBillingPatient.category,
+                items: JSON.parse(JSON.stringify(billingItems)),
+                subtotal: subtotal,
+                discount: billingDiscount,
+                tax: tax,
+                total: total,
+                paymentMethod: method,
+                amountPaid: paid,
+                change: change,
+                createdAt: new Date().toISOString()
+            };
+
+            // Save transaction
+            transactions.push(newTx);
+            localStorage.setItem('antrian_transactions', JSON.stringify(transactions));
+
+            // Mark queue item status as completed
+            const qIdx = queues.findIndex(q => q.id === activeBillingPatient.id);
+            if (qIdx !== -1) {
+                queues[qIdx].status = 'completed';
+                queues[qIdx].paidAt = new Date().toISOString();
+                saveQueues();
+            }
+
+            // Print Receipt
+            triggerReceiptPrint(newTx);
+
+            // Clean active states
+            activeBillingPatient = null;
+            billingItems = [];
+            
+            updateUI();
+            renderCashierWorkspace();
+            alert('Pembayaran berhasil diproses!');
+        }
+
+        function triggerReceiptPrint(tx) {
+            const printArea = document.getElementById('print-receipt-area');
+            if (!printArea) return;
+
+            // Fill header info
+            document.getElementById('print-rcpt-clinic-name').textContent = clinicInfo.name;
+            document.getElementById('print-rcpt-clinic-address').textContent = clinicInfo.address;
+            document.getElementById('print-rcpt-id').textContent = `No. Transaksi: ${tx.id}`;
+            document.getElementById('print-rcpt-ticket').textContent = tx.ticketNumber;
+            document.getElementById('print-rcpt-category').textContent = tx.patientCategory;
+            
+            const date = new Date(tx.createdAt);
+            document.getElementById('print-rcpt-datetime').textContent = date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+
+            // Items Table
+            const body = document.getElementById('print-rcpt-items-body');
+            body.innerHTML = '';
+            tx.items.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td class="py-1 max-w-[40mm] truncate">${item.name}</td>
+                    <td class="py-1 text-center">${item.qty}</td>
+                    <td class="py-1 text-right">Rp ${(item.price * item.qty).toLocaleString('id-ID')}</td>
+                `;
+                body.appendChild(tr);
+            });
+
+            // Pricing Summaries
+            document.getElementById('print-rcpt-subtotal').textContent = `Rp ${tx.subtotal.toLocaleString('id-ID')}`;
+            
+            const discRow = document.getElementById('print-rcpt-discount-row');
+            if (tx.discount > 0) {
+                discRow.classList.remove('hidden');
+                document.getElementById('print-rcpt-discount').textContent = `-Rp ${tx.discount.toLocaleString('id-ID')}`;
+            } else {
+                discRow.classList.add('hidden');
+            }
+
+            const taxRow = document.getElementById('print-rcpt-tax-row');
+            if (tx.tax > 0) {
+                taxRow.classList.remove('hidden');
+                document.getElementById('print-rcpt-tax').textContent = `Rp ${tx.tax.toLocaleString('id-ID')}`;
+            } else {
+                taxRow.classList.add('hidden');
+            }
+
+            document.getElementById('print-rcpt-total').textContent = `Rp ${tx.total.toLocaleString('id-ID')}`;
+            document.getElementById('print-rcpt-method').textContent = tx.paymentMethod;
+
+            const paidRow = document.getElementById('print-rcpt-paid-row');
+            const changeRow = document.getElementById('print-rcpt-change-row');
+
+            if (tx.paymentMethod === 'Tunai') {
+                paidRow.classList.remove('hidden');
+                changeRow.classList.remove('hidden');
+                document.getElementById('print-rcpt-paid').textContent = `Rp ${tx.amountPaid.toLocaleString('id-ID')}`;
+                document.getElementById('print-rcpt-change').textContent = `Rp ${tx.change.toLocaleString('id-ID')}`;
+            } else {
+                paidRow.classList.add('hidden');
+                changeRow.classList.add('hidden');
+            }
+
+            // Print
+            printArea.classList.add('print-active');
+            setTimeout(() => {
+                window.print();
+                setTimeout(() => {
+                    printArea.classList.remove('print-active');
+                }, 500);
+            }, 250);
+        }
+
+        function renderTransactionsHistory() {
+            const container = document.getElementById('cashier-history-list');
+            container.innerHTML = '';
+            
+            // Get today's date range
+            const todayStr = new Date().toDateString();
+            const todayTx = transactions.filter(t => new Date(t.createdAt).toDateString() === todayStr);
+            
+            // Sort by time desc
+            todayTx.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+            if (todayTx.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-slate-400 text-xs">
+                        Belum ada transaksi pembayaran lunas hari ini.
+                    </div>
+                `;
+                return;
+            }
+
+            todayTx.forEach(t => {
+                const div = document.createElement('div');
+                div.className = "p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition flex items-center justify-between text-xs";
+                
+                const time = new Date(t.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                
+                div.innerHTML = `
+                    <div class="space-y-0.5">
+                        <div class="flex items-center gap-1.5">
+                            <span class="font-bold text-slate-800">${t.ticketNumber}</span>
+                            <span class="text-[9px] text-emerald-800 font-bold bg-emerald-100 px-1.5 py-0.2 rounded uppercase">Lunas</span>
+                        </div>
+                        <span class="text-[10px] text-slate-400 block">${t.id} • ${time} WIB</span>
+                    </div>
+                    <div class="text-right flex flex-col items-end gap-1">
+                        <span class="font-extrabold text-slate-800">Rp ${t.total.toLocaleString('id-ID')}</span>
+                        <button onclick="reprintReceipt('${t.id}')" class="text-[10px] text-brand-600 hover:text-brand-800 font-bold flex items-center gap-0.5">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            Struk
+                        </button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function reprintReceipt(txId) {
+            const tx = transactions.find(t => t.id === txId);
+            if (tx) {
+                triggerReceiptPrint(tx);
+            }
+        }
+
+        // --- PRODUCT / SERVICES CATALOGUE SETTINGS LOGIC ---
+        function renderProductsSettings() {
+            const container = document.getElementById('settings-products-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            products.forEach((prod, idx) => {
+                const row = document.createElement('div');
+                row.className = "flex items-center justify-between p-3 text-sm hover:bg-slate-50";
+                row.innerHTML = `
+                    <div class="flex flex-col">
+                        <span class="font-bold text-slate-800">${prod.name}</span>
+                        <span class="text-xs text-slate-500">Rp ${prod.price.toLocaleString('id-ID')}</span>
+                    </div>
+                    <button onclick="removeProduct(${idx})" class="text-red-500 hover:text-red-700 font-bold text-xs flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7" /></svg>
+                        Hapus
+                    </button>
+                `;
+                container.appendChild(row);
+            });
+        }
+
+        function addNewProduct() {
+            const nameInput = document.getElementById('settings-new-product-name');
+            const priceInput = document.getElementById('settings-new-product-price');
+            const name = nameInput.value.trim();
+            const price = parseInt(priceInput.value.trim());
+
+            if (!name || isNaN(price) || price < 0) {
+                alert('Nama produk dan harga harus diisi dengan benar!');
+                return;
+            }
+
+            const id = new Date().getTime();
+            products.push({ id, name, price });
+            localStorage.setItem('antrian_products', JSON.stringify(products));
+            
+            nameInput.value = '';
+            priceInput.value = '';
+            
+            renderProductsSettings();
+            if (currentView === 'cashier') renderCashierWorkspace();
+        }
+
+        // Hapus produk katalog
+        function removeProduct(index) {
+            if (confirm(`Apakah Anda yakin ingin menghapus "${products[index].name}" dari katalog?`)) {
+                products.splice(index, 1);
+                localStorage.setItem('antrian_products', JSON.stringify(products));
+                renderProductsSettings();
+                if (currentView === 'cashier') renderCashierWorkspace();
+            }
         }
     </script>
 </body>
