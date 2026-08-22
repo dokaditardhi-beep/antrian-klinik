@@ -100,6 +100,15 @@
                     </div>
                 </div>
 
+                <!-- Live Clock WIB Widget -->
+                <div class="hidden xl:flex items-center gap-2.5 bg-slate-50 border border-slate-200/80 px-3.5 py-1.5 rounded-xl shadow-xs">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <div class="text-left">
+                        <p class="text-xs font-black text-slate-800 tracking-tight font-mono" id="header-live-time">--:--:-- WIB</p>
+                        <p class="text-[10px] text-slate-500 font-semibold leading-none" id="header-live-date">--</p>
+                    </div>
+                </div>
+
                 <!-- Navigation Tabs -->
                 <div class="hidden md:flex items-center space-x-4">
                     <nav class="flex space-x-1 bg-slate-100 p-1 rounded-xl">
@@ -476,9 +485,16 @@
                             <span class="text-xs font-bold text-slate-400 tracking-widest uppercase">PANGGILAN AKTIF</span>
                             <h3 class="text-base font-extrabold text-brand-900" id="mon-clinic-name">KLINIK JAYA MEDIKA</h3>
                         </div>
-                        <div class="flex items-center gap-1.5 text-xs text-brand-600 font-bold bg-brand-50 px-2.5 py-1 rounded-full border border-brand-100" id="mon-voice-status">
-                            <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
-                            AUDIO ON
+                        <div class="flex items-center gap-4">
+                            <!-- Live Clock WIB on Monitor -->
+                            <div class="text-right">
+                                <span class="text-base md:text-lg font-black text-slate-800 font-mono tracking-tight block leading-tight" id="mon-live-time">--:--:-- WIB</span>
+                                <span class="text-[11px] text-slate-400 font-semibold block" id="mon-live-date">--</span>
+                            </div>
+                            <div class="flex items-center gap-1.5 text-xs text-brand-600 font-bold bg-brand-50 px-2.5 py-1 rounded-full border border-brand-100" id="mon-voice-status">
+                                <span class="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-ping"></span>
+                                AUDIO ON
+                            </div>
                         </div>
                     </div>
 
@@ -1114,6 +1130,104 @@
         // Audio Settings
         let syntheticVoicesLoaded = false;
 
+        // ==========================================
+        // WIB TIMEZONE (Asia/Jakarta, UTC+7) & DAILY RESET ENGINE
+        // ==========================================
+        function getTodayWIBString() {
+            return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // Output: YYYY-MM-DD
+        }
+
+        function getTodayStartWIB() {
+            const wibDateString = getTodayWIBString();
+            return new Date(`${wibDateString}T00:00:00.000+07:00`);
+        }
+
+        function formatWIBTime(date = new Date(), withSeconds = false) {
+            if (!date) return '-';
+            const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+            const options = {
+                timeZone: 'Asia/Jakarta',
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: false
+            };
+            if (withSeconds) options.second = '2-digit';
+            return d.toLocaleTimeString('id-ID', options);
+        }
+
+        function formatWIBDate(date = new Date(), withDayName = true) {
+            if (!date) return '-';
+            const d = typeof date === 'string' || typeof date === 'number' ? new Date(date) : date;
+            const options = {
+                timeZone: 'Asia/Jakarta',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            };
+            if (withDayName) options.weekday = 'long';
+            return d.toLocaleDateString('id-ID', options);
+        }
+
+        // Live Clock Ticker (Runs every second in WIB)
+        function startWIBLiveClock() {
+            function updateClock() {
+                const now = new Date();
+                const timeStr = formatWIBTime(now, true) + ' WIB';
+                const dateStr = formatWIBDate(now, true);
+
+                // Header Clock
+                const headerTime = document.getElementById('header-live-time');
+                const headerDate = document.getElementById('header-live-date');
+                if (headerTime) headerTime.textContent = timeStr;
+                if (headerDate) headerDate.textContent = dateStr;
+
+                // Monitor Clock
+                const monTime = document.getElementById('mon-live-time');
+                const monDate = document.getElementById('mon-live-date');
+                if (monTime) monTime.textContent = timeStr;
+                if (monDate) monDate.textContent = dateStr;
+
+                // Check Midnight 00:00:00 Daily Reset
+                checkAndResetDailyQueues();
+            }
+
+            updateClock();
+            setInterval(updateClock, 1000);
+        }
+
+        // Check & Reset Queue automatically at 00:00 WIB
+        async function checkAndResetDailyQueues() {
+            const lastActiveDate = localStorage.getItem('antrian_last_active_date');
+            const todayWIB = getTodayWIBString();
+
+            if (lastActiveDate && lastActiveDate !== todayWIB) {
+                console.log(`[DailyReset] 🌙 Pergantian hari pukul 00:00 WIB terdeteksi (${lastActiveDate} -> ${todayWIB}). Mereset antrean harian ke nomor 1...`);
+                
+                // Update active date
+                localStorage.setItem('antrian_last_active_date', todayWIB);
+                
+                // Clear local active queues for the new day
+                queues = [];
+                saveQueues();
+
+                if (isSupabaseConnected && navigator.onLine) {
+                    await Promise.all([
+                        loadQueuesFromSupabase(),
+                        loadTransactionsFromSupabase()
+                    ]);
+                }
+
+                updateUI();
+                if (currentView === 'cashier') renderCashierWorkspace();
+                if (currentView === 'monitor') renderMonitorWorkspace();
+                if (currentView === 'operator') renderOperatorWorkspace();
+
+                showGlobalSyncToast(`🌙 Pergantian Hari: Antrean hari ini (${formatWIBDate(new Date(), false)}) telah di-reset mulai nomor 1.`, true);
+            } else if (!lastActiveDate) {
+                localStorage.setItem('antrian_last_active_date', todayWIB);
+            }
+        }
+
         // Supabase Database Connection variables
         let supabaseUrl = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.SUPABASE_URL) || localStorage.getItem('supabase_url') || "";
         let supabaseAnonKey = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.SUPABASE_ANON_KEY) || localStorage.getItem('supabase_anon_key') || "";
@@ -1485,7 +1599,14 @@
 
         async function loadQueuesFromSupabase() {
             if (!isSupabaseConnected) return;
-            const { data, error } = await supabaseClient.from('queues').select('*').order('id', { ascending: true });
+            const todayStartWIB = getTodayStartWIB();
+
+            const { data, error } = await supabaseClient
+                .from('queues')
+                .select('*')
+                .gte('created_at', todayStartWIB.toISOString())
+                .order('id', { ascending: true });
+
             if (data && !error) {
                 queues = data.map(q => ({
                     id: q.id,
@@ -1506,13 +1627,12 @@
 
         async function loadTransactionsFromSupabase() {
             if (!isSupabaseConnected) return;
-            const todayStart = new Date();
-            todayStart.setHours(0,0,0,0);
+            const todayStartWIB = getTodayStartWIB();
             
             const { data, error } = await supabaseClient
                 .from('transactions')
                 .select('*, transaction_items(*)')
-                .gte('created_at', todayStart.toISOString())
+                .gte('created_at', todayStartWIB.toISOString())
                 .order('created_at', { ascending: false });
 
             if (data && !error) {
@@ -1542,6 +1662,7 @@
         
         // --- LIFE CYCLE INITIALIZATION ---
         window.addEventListener('DOMContentLoaded', () => {
+            startWIBLiveClock();
             initializeData();
             const initialTarget = currentUser ? (currentUser.role === 'cashier' ? 'cashier' : 'dashboard') : 'kiosk';
             switchView(initialTarget);
@@ -1868,7 +1989,7 @@
                 item.className = "flex items-center justify-between p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition";
                 
                 const badgeColor = q.category === 'UMUM' ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-100 text-brand-800';
-                const formattedTime = new Date(q.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const formattedTime = formatWIBTime(q.createdAt);
 
                 item.innerHTML = `
                     <div class="flex items-center gap-3">
@@ -2103,7 +2224,7 @@
             const historyList = document.getElementById('mon-history-list');
             historyList.innerHTML = '';
 
-            const historyItems = queues.filter(q => q.status === 'called' || q.status === 'waiting_payment' || q.status === 'completed');
+            const historyItems = queues.filter(q => q.calledAt && (q.status === 'waiting_payment' || q.status === 'completed'));
             historyItems.sort((a, b) => new Date(b.calledAt) - new Date(a.calledAt));
             
             // Slice top 5 history
@@ -2119,7 +2240,7 @@
                     row.className = "flex justify-between items-center py-2 text-xs";
                     const isUmum = q.category === 'UMUM';
                     const nameColor = isUmum ? 'text-emerald-600 font-bold' : 'text-brand-600 font-bold';
-                    const timeString = new Date(q.calledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                    const timeString = formatWIBTime(q.calledAt);
 
                     row.innerHTML = `
                         <div class="flex items-center gap-2">
@@ -2360,9 +2481,9 @@
             document.getElementById('print-ticket-number').textContent = item.formattedNumber;
             document.getElementById('print-footer-msg').textContent = clinicInfo.footer;
             
-            // Format current date time
+            // Format current date time (WIB)
             const now = new Date();
-            const datetimeStr = now.toLocaleDateString('id-ID') + ' ' + now.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+            const datetimeStr = formatWIBDate(now, true) + ' ' + formatWIBTime(now) + ' WIB';
             document.getElementById('print-datetime').textContent = datetimeStr;
             document.getElementById('print-wait-count').textContent = `${waitCount} Orang`;
 
@@ -2868,9 +2989,7 @@
                     item.className = `w-full text-left p-3 rounded-xl border flex items-center justify-between transition ${activeClass}`;
                     
                     const badgeColor = q.category === 'UMUM' ? 'bg-emerald-100 text-emerald-800' : 'bg-brand-100 text-brand-800';
-                    const calledTime = q.calledAt 
-                        ? new Date(q.calledAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) 
-                        : '-';
+                    const calledTime = q.calledAt ? formatWIBTime(q.calledAt) : '-';
 
                     item.innerHTML = `
                         <div class="flex items-center gap-3">
@@ -2911,9 +3030,7 @@
                 catBadge.textContent = activeBillingPatient.category;
                 catBadge.className = `text-xs font-bold px-2 py-0.5 rounded-full ${badgeColor}`;
                 
-                const startTime = activeBillingPatient.createdAt 
-                    ? new Date(activeBillingPatient.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) 
-                    : '-';
+                const startTime = activeBillingPatient.createdAt ? formatWIBTime(activeBillingPatient.createdAt) : '-';
                 document.getElementById('cashier-patient-time').textContent = `Masuk Kiosk: ${startTime} WIB`;
                 
                 renderBillingCart();
@@ -3284,7 +3401,7 @@
             const date = tx.createdAt ? new Date(tx.createdAt) : new Date();
             const dateEl = document.getElementById('print-rcpt-datetime');
             if (dateEl) {
-                dateEl.textContent = date.toLocaleDateString('id-ID') + ' ' + date.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) + ' WIB';
+                dateEl.textContent = formatWIBDate(date, true) + ' ' + formatWIBTime(date) + ' WIB';
             }
 
             // Items Table
@@ -3381,9 +3498,12 @@
             const container = document.getElementById('cashier-history-list');
             container.innerHTML = '';
             
-            // Get today's date range
-            const todayStr = new Date().toDateString();
-            const todayTx = transactions.filter(t => new Date(t.createdAt).toDateString() === todayStr);
+            // Get today's date range (WIB)
+            const todayWIB = getTodayWIBString();
+            const todayTx = transactions.filter(t => {
+                const txDate = t.createdAt ? new Date(t.createdAt).toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }) : '';
+                return txDate === todayWIB;
+            });
             
             // Sort by time desc
             todayTx.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
@@ -3401,7 +3521,7 @@
                 const div = document.createElement('div');
                 div.className = "p-3 rounded-xl border border-slate-100 bg-slate-50 hover:bg-white hover:shadow-sm transition flex items-center justify-between text-xs";
                 
-                const time = new Date(t.createdAt).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+                const time = formatWIBTime(t.createdAt);
                 
                 div.innerHTML = `
                     <div class="space-y-0.5">
