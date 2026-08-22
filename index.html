@@ -97,26 +97,41 @@
                 </div>
 
                 <!-- Navigation Tabs -->
-                <nav class="hidden md:flex space-x-1 bg-slate-100 p-1 rounded-xl">
-                    <button onclick="switchView('dashboard')" id="tab-dashboard" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-brand-700 bg-white shadow-sm">
-                        Beranda
-                    </button>
-                    <button onclick="switchView('kiosk')" id="tab-kiosk" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
-                        Kiosk Tiket
-                    </button>
-                    <button onclick="switchView('operator')" id="tab-operator" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
-                        Operator Panggil
-                    </button>
-                    <button onclick="switchView('monitor')" id="tab-monitor" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
-                        Layar Monitor
-                    </button>
-                    <button onclick="switchView('cashier')" id="tab-cashier" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
-                        Kasir / POS
-                    </button>
-                    <button onclick="switchView('settings')" id="tab-settings" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
-                        Pengaturan
-                    </button>
-                </nav>
+                <div class="hidden md:flex items-center space-x-4">
+                    <nav class="flex space-x-1 bg-slate-100 p-1 rounded-xl">
+                        <button onclick="switchView('dashboard')" id="tab-dashboard" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-brand-700 bg-white shadow-sm">
+                            Beranda
+                        </button>
+                        <button onclick="switchView('kiosk')" id="tab-kiosk" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                            Kiosk Tiket
+                        </button>
+                        <button onclick="switchView('operator')" id="tab-operator" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                            Operator Panggil
+                        </button>
+                        <button onclick="switchView('monitor')" id="tab-monitor" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                            Layar Monitor
+                        </button>
+                        <button onclick="switchView('cashier')" id="tab-cashier" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                            Kasir / POS
+                        </button>
+                        <button onclick="switchView('settings')" id="tab-settings" class="px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50">
+                            Pengaturan
+                        </button>
+                    </nav>
+
+                    <!-- User Profile & Logout -->
+                    <div id="nav-profile-area" class="hidden items-center gap-3 pl-4 border-l border-slate-200">
+                        <div class="text-right flex flex-col justify-center">
+                            <p class="text-xs font-bold text-slate-800 leading-tight" id="nav-user-name">Nama Staf</p>
+                            <p class="text-[9px] font-extrabold text-brand-600 uppercase tracking-wider leading-none mt-0.5" id="nav-user-role">Role</p>
+                        </div>
+                        <button onclick="handleLogout()" class="text-slate-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-red-50" title="Keluar / Logout">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
 
                 <!-- Mobile Menu Selector -->
                 <div class="md:hidden">
@@ -988,6 +1003,35 @@
         }
     </style>
 
+    <!-- 6. LOGIN VIEW -->
+    <section id="view-login" class="hidden max-w-md mx-auto my-12">
+        <div class="bg-white border border-brand-100 rounded-3xl p-8 shadow-xl">
+            <div class="text-center mb-6">
+                <div class="h-12 w-12 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                </div>
+                <h3 class="font-bold text-slate-800 text-xl">Login Staf Klinik</h3>
+                <p class="text-xs text-slate-400 mt-1 font-semibold">Masukkan kredensial Anda untuk mengakses panel loket / kasir</p>
+            </div>
+            
+            <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                <div>
+                    <label for="login-username" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Username</label>
+                    <input type="text" id="login-username" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                </div>
+                <div>
+                    <label for="login-password" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Password</label>
+                    <input type="password" id="login-password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                </div>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md">
+                    Masuk ke Aplikasi
+                </button>
+            </form>
+        </div>
+    </section>
+
     <!-- SYSTEM JAVASCRIPT CODE -->
     <script>
         // --- DATABASE & INITIAL STATES ---
@@ -1313,10 +1357,17 @@
             updateCounterOptions();
             updateUI();
             updateSupabaseStatusUI();
+            updateNavigationUI();
         }
 
         // --- CORE NAVIGATION & VIEWS ---
         function switchView(viewName) {
+            // Check access permission
+            if (!checkAccessPermission(viewName)) {
+                redirectAfterLogin = viewName;
+                viewName = 'login';
+            }
+
             currentView = viewName;
             
             // Hide all views
@@ -1326,6 +1377,7 @@
             document.getElementById('view-monitor').classList.add('hidden');
             document.getElementById('view-settings').classList.add('hidden');
             document.getElementById('view-cashier').classList.add('hidden');
+            document.getElementById('view-login').classList.add('hidden');
 
             // Show target view
             document.getElementById(`view-${viewName}`).classList.remove('hidden');
@@ -1334,15 +1386,18 @@
             const tabs = ['dashboard', 'kiosk', 'operator', 'monitor', 'cashier', 'settings'];
             tabs.forEach(tab => {
                 const el = document.getElementById(`tab-${tab}`);
-                if (tab === viewName) {
-                    el.className = "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-brand-700 bg-white shadow-sm";
-                } else {
-                    el.className = "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50";
+                if (el) {
+                    if (tab === viewName) {
+                        el.className = "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-brand-700 bg-white shadow-sm";
+                    } else {
+                        el.className = "px-4 py-2 text-sm font-semibold rounded-lg transition-all duration-200 text-slate-600 hover:text-brand-700 hover:bg-white/50";
+                    }
                 }
             });
 
             // Update Mobile dropdown selection
-            document.getElementById('mobile-nav').value = viewName;
+            const mobileNav = document.getElementById('mobile-nav');
+            if (mobileNav) mobileNav.value = viewName;
 
             // Load settings into input fields if viewing settings
             if (viewName === 'settings') {
@@ -3066,6 +3121,164 @@
                 renderProductsSettings();
                 if (currentView === 'cashier') renderCashierWorkspace();
             }
+        }
+        // --- STAFF AUTHENTICATION & ACCESS CONTROL ---
+        let currentUser = JSON.parse(sessionStorage.getItem('clinic_user')) || null;
+        let redirectAfterLogin = null;
+
+        // SHA-256 password hashing
+        async function sha256(message) {
+            const msgBuffer = new TextEncoder().encode(message);
+            const hashBuffer = await crypto.subtle.digest('SHA-256', msgBuffer);
+            const hashArray = Array.from(new Uint8Array(hashBuffer));
+            return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        // Login Submit Handler
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            const username = document.getElementById('login-username').value.trim();
+            const passwordPlain = document.getElementById('login-password').value.trim();
+            
+            if (!username || !passwordPlain) {
+                alert('Silakan masukkan username dan password.');
+                return;
+            }
+
+            const passwordHash = await sha256(passwordPlain);
+            let userMatch = null;
+
+            if (isSupabaseConnected) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('users')
+                        .select('*')
+                        .eq('username', username)
+                        .eq('password_hash', passwordHash)
+                        .maybeSingle();
+
+                    if (error) throw error;
+                    if (data) userMatch = data;
+                } catch (err) {
+                    console.error('Error logging in from cloud db:', err);
+                }
+            }
+            
+            // Fallback for offline/local emergency bypass
+            if (!userMatch) {
+                if (username === 'admin' && passwordPlain === 'admin123') {
+                    userMatch = { username: 'admin', role: 'admin', display_name: 'Dr. Adit (Offline)' };
+                }
+            }
+
+            if (userMatch) {
+                currentUser = {
+                    username: userMatch.username,
+                    role: userMatch.role,
+                    displayName: userMatch.display_name,
+                    counterName: userMatch.counter_name
+                };
+                sessionStorage.setItem('clinic_user', JSON.stringify(currentUser));
+                
+                // If operator has a pre-assigned counter, select it
+                if (currentUser.role === 'operator' && currentUser.counterName) {
+                    opSelectedCounter = currentUser.counterName;
+                    localStorage.setItem('antrian_op_counter', opSelectedCounter);
+                }
+
+                document.getElementById('login-form').reset();
+                updateNavigationUI();
+                
+                const target = redirectAfterLogin || (currentUser.role === 'operator' ? 'operator' : currentUser.role === 'cashier' ? 'cashier' : 'dashboard');
+                redirectAfterLogin = null;
+                switchView(target);
+            } else {
+                alert('Username atau password salah! (Gunakan admin/admin123 jika offline)');
+            }
+        }
+
+        // Logout Handler
+        function handleLogout() {
+            if (confirm('Apakah Anda yakin ingin keluar / logout?')) {
+                currentUser = null;
+                sessionStorage.removeItem('clinic_user');
+                updateNavigationUI();
+                switchView('kiosk'); // Send to public kiosk view
+            }
+        }
+
+        // Dynamically show/hide tabs and mobile navigation based on current user role
+        function updateNavigationUI() {
+            const profileArea = document.getElementById('nav-profile-area');
+            const userNameEl = document.getElementById('nav-user-name');
+            const userRoleEl = document.getElementById('nav-user-role');
+            
+            if (currentUser) {
+                if (profileArea) {
+                    profileArea.classList.remove('hidden');
+                    profileArea.classList.add('flex');
+                }
+                if (userNameEl) userNameEl.textContent = currentUser.displayName;
+                
+                let roleLabel = currentUser.role.toUpperCase();
+                if (currentUser.role === 'operator') {
+                    roleLabel = `OPERATOR (${opSelectedCounter})`;
+                }
+                if (userRoleEl) userRoleEl.textContent = roleLabel;
+            } else {
+                if (profileArea) {
+                    profileArea.classList.remove('flex');
+                    profileArea.classList.add('hidden');
+                }
+            }
+
+            // Show/Hide Navbar Tabs based on Role
+            const allTabs = ['dashboard', 'kiosk', 'operator', 'monitor', 'cashier', 'settings'];
+            allTabs.forEach(tab => {
+                const tabEl = document.getElementById(`tab-${tab}`);
+                const isAllowed = checkAccessPermission(tab);
+                if (tabEl) {
+                    if (isAllowed) {
+                        tabEl.classList.remove('hidden');
+                    } else {
+                        tabEl.classList.add('hidden');
+                    }
+                }
+            });
+
+            // Update Mobile dropdown options dynamically
+            const mobileNav = document.getElementById('mobile-nav');
+            if (mobileNav) {
+                mobileNav.innerHTML = '';
+                allTabs.forEach(tab => {
+                    if (checkAccessPermission(tab)) {
+                        const opt = document.createElement('option');
+                        opt.value = tab;
+                        opt.textContent = tab === 'dashboard' ? 'Beranda' :
+                                          tab === 'kiosk' ? 'Kiosk Tiket' :
+                                          tab === 'operator' ? 'Operator Panggil' :
+                                          tab === 'monitor' ? 'Layar Monitor' :
+                                          tab === 'cashier' ? 'Kasir / POS' : 'Pengaturan';
+                        mobileNav.appendChild(opt);
+                    }
+                });
+            }
+        }
+
+        // Access control check
+        function checkAccessPermission(viewName) {
+            // Public pages accessible to anyone
+            if (['kiosk', 'monitor', 'login'].includes(viewName)) return true;
+            
+            // Protected pages require authentication
+            if (!currentUser) return false;
+            
+            // Role check
+            if (currentUser.role === 'admin') return true;
+            if (currentUser.role === 'operator' && viewName === 'operator') return true;
+            if (currentUser.role === 'cashier' && viewName === 'cashier') return true;
+            
+            return false;
         }
     </script>
 </body>
