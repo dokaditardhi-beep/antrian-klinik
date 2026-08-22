@@ -533,7 +533,7 @@
                 <div class="space-y-4">
                     <div>
                         <label for="settings-sb-url" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Supabase API URL</label>
-                        <input type="text" id="settings-sb-url" placeholder="Contoh: https://xxxx.supabase.co" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                        <input type="text" id="settings-sb-url" placeholder="Contoh: https://xxxx.supabaseClient.co" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
                     </div>
                     <div>
                         <label for="settings-sb-key" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Supabase Anon Key</label>
@@ -1034,14 +1034,14 @@
         // Supabase Database Connection variables
         let supabaseUrl = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.SUPABASE_URL) || localStorage.getItem('supabase_url') || "";
         let supabaseAnonKey = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.SUPABASE_ANON_KEY) || localStorage.getItem('supabase_anon_key') || "";
-        let supabase = null;
+        let supabaseClient = null;
         let isSupabaseConnected = false;
         let supabaseSubscription = null;
 
         function initSupabase() {
             if (supabaseUrl && supabaseAnonKey) {
                 try {
-                    supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+                    supabaseClient = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
                     isSupabaseConnected = true;
                     console.log("Supabase client initialized.");
                     setupSupabaseRealtime();
@@ -1086,9 +1086,9 @@
                     localStorage.removeItem('supabase_url');
                     localStorage.removeItem('supabase_anon_key');
                     isSupabaseConnected = false;
-                    supabase = null;
+                    supabaseClient = null;
                     if (supabaseSubscription) {
-                        supabase.removeChannel(supabaseSubscription);
+                        supabaseClient.removeChannel(supabaseSubscription);
                         supabaseSubscription = null;
                     }
                     initializeData();
@@ -1108,13 +1108,13 @@
         }
 
         function setupSupabaseRealtime() {
-            if (!supabase || !isSupabaseConnected) return;
+            if (!supabaseClient || !isSupabaseConnected) return;
 
             if (supabaseSubscription) {
-                supabase.removeChannel(supabaseSubscription);
+                supabaseClient.removeChannel(supabaseSubscription);
             }
 
-            supabaseSubscription = supabase
+            supabaseSubscription = supabaseClient
                 .channel('realtime-clinic-changes')
                 .on('postgres_changes', { event: '*', schema: 'public', table: 'queues' }, async (payload) => {
                     console.log("Realtime event on queues:", payload);
@@ -1149,7 +1149,7 @@
 
         async function loadClinicInfoFromSupabase() {
             if (!isSupabaseConnected) return;
-            const { data, error } = await supabase.from('clinic_info').select('*').eq('id', 1).single();
+            const { data, error } = await supabaseClient.from('clinic_info').select('*').eq('id', 1).single();
             if (data && !error) {
                 clinicInfo = data;
                 updateUI();
@@ -1158,7 +1158,7 @@
 
         async function loadCountersFromSupabase() {
             if (!isSupabaseConnected) return;
-            const { data, error } = await supabase.from('counters').select('name').order('id', { ascending: true });
+            const { data, error } = await supabaseClient.from('counters').select('name').order('id', { ascending: true });
             if (data && !error) {
                 counters = data.map(c => c.name);
                 updateCounterOptions();
@@ -1168,7 +1168,7 @@
 
         async function loadProductsFromSupabase() {
             if (!isSupabaseConnected) return;
-            const { data, error } = await supabase.from('products').select('*').order('id', { ascending: true });
+            const { data, error } = await supabaseClient.from('products').select('*').order('id', { ascending: true });
             if (data && !error) {
                 products = data;
                 if (currentView === 'cashier') renderCashierWorkspace();
@@ -1178,7 +1178,7 @@
 
         async function loadQueuesFromSupabase() {
             if (!isSupabaseConnected) return;
-            const { data, error } = await supabase.from('queues').select('*').order('id', { ascending: true });
+            const { data, error } = await supabaseClient.from('queues').select('*').order('id', { ascending: true });
             if (data && !error) {
                 queues = data.map(q => ({
                     id: q.id,
@@ -1202,7 +1202,7 @@
             const todayStart = new Date();
             todayStart.setHours(0,0,0,0);
             
-            const { data, error } = await supabase
+            const { data, error } = await supabaseClient
                 .from('transactions')
                 .select('*, transaction_items(*)')
                 .gte('created_at', todayStart.toISOString())
@@ -1222,7 +1222,7 @@
                     amountPaid: Number(t.amount_paid),
                     change: Number(t.change),
                     createdAt: t.created_at,
-                    items: t.transaction_items.map(ti => ({
+                    items: (t.transaction_items || []).map(ti => ({
                         id: ti.id,
                         name: ti.name,
                         price: Number(ti.price),
@@ -1542,7 +1542,7 @@
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (activeCall) {
                 if (isSupabaseConnected) {
-                    await supabase.from('queues').update({ status: 'waiting_payment' }).eq('id', activeCall.id);
+                    await supabaseClient.from('queues').update({ status: 'waiting_payment' }).eq('id', activeCall.id);
                 } else {
                     activeCall.status = 'waiting_payment';
                 }
@@ -1562,7 +1562,7 @@
             }
 
             if (isSupabaseConnected) {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('queues')
                     .update({ 
                         status: 'calling', 
@@ -1597,7 +1597,7 @@
 
             if (isSupabaseConnected) {
                 // Touch called_at to trigger realtime event update on queues table
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('queues')
                     .update({ 
                         status: 'calling', 
@@ -1636,7 +1636,7 @@
             if (!activeCall) return;
 
             if (isSupabaseConnected) {
-                const { error } = await supabase
+                const { error } = await supabaseClient
                     .from('queues')
                     .update({ status: 'waiting_payment' })
                     .eq('id', activeCall.id);
@@ -1921,7 +1921,7 @@
             };
 
             if (isSupabaseConnected) {
-                const { data, error } = await supabase
+                const { data, error } = await supabaseClient
                     .from('queues')
                     .insert({
                         category: newItem.category,
@@ -2019,7 +2019,7 @@
             };
 
             if (isSupabaseConnected) {
-                const { error } = await supabase.from('clinic_info').update(clinicInfo).eq('id', 1);
+                const { error } = await supabaseClient.from('clinic_info').update(clinicInfo).eq('id', 1);
                 if (error) {
                     alert('Gagal memperbarui informasi klinik di cloud: ' + error.message);
                     return;
@@ -2148,7 +2148,7 @@
             }
 
             if (isSupabaseConnected) {
-                const { error } = await supabase.from('counters').insert({ name: val });
+                const { error } = await supabaseClient.from('counters').insert({ name: val });
                 if (error) {
                     alert('Gagal menambah loket di cloud: ' + error.message);
                     return;
@@ -2173,7 +2173,7 @@
             const name = counters[index];
             if (confirm(`Apakah Anda yakin ingin menghapus loket "${name}"?`)) {
                 if (isSupabaseConnected) {
-                    const { error } = await supabase.from('counters').delete().eq('name', name);
+                    const { error } = await supabaseClient.from('counters').delete().eq('name', name);
                     if (error) {
                         alert('Gagal menghapus loket di cloud: ' + error.message);
                         return;
@@ -2200,9 +2200,9 @@
         async function confirmReset() {
             if (confirm('PERINGATAN! Anda akan menghapus seluruh data antrean dan riwayat transaksi saat ini. Lanjutkan?')) {
                 if (isSupabaseConnected) {
-                    const { error: err1 } = await supabase.from('transaction_items').delete().neq('id', 0);
-                    const { error: err2 } = await supabase.from('transactions').delete().neq('id', '0');
-                    const { error: err3 } = await supabase.from('queues').delete().neq('id', 0);
+                    const { error: err1 } = await supabaseClient.from('transaction_items').delete().neq('id', 0);
+                    const { error: err2 } = await supabaseClient.from('transactions').delete().neq('id', '0');
+                    const { error: err3 } = await supabaseClient.from('queues').delete().neq('id', 0);
                     
                     if (err1 || err2 || err3) {
                         alert('Gagal melakukan reset data di server Supabase: ' + (err1?.message || err2?.message || err3?.message));
@@ -2238,9 +2238,9 @@
 
             if (isSupabaseConnected) {
                 // Clear existing tables first
-                const { error: clearErr1 } = await supabase.from('transaction_items').delete().neq('id', 0);
-                const { error: clearErr2 } = await supabase.from('transactions').delete().neq('id', '0');
-                const { error: clearErr3 } = await supabase.from('queues').delete().neq('id', 0);
+                const { error: clearErr1 } = await supabaseClient.from('transaction_items').delete().neq('id', 0);
+                const { error: clearErr2 } = await supabaseClient.from('transactions').delete().neq('id', '0');
+                const { error: clearErr3 } = await supabaseClient.from('queues').delete().neq('id', 0);
 
                 if (clearErr1 || clearErr2 || clearErr3) {
                     alert('Gagal membersihkan data lama di server: ' + (clearErr1?.message || clearErr2?.message || clearErr3?.message));
@@ -2271,7 +2271,7 @@
                     });
                 }
 
-                const { data: insertedQueues, error: qErr } = await supabase.from('queues').insert(dbQueues).select();
+                const { data: insertedQueues, error: qErr } = await supabaseClient.from('queues').insert(dbQueues).select();
                 if (qErr) {
                     alert('Gagal membuat data antrean simulasi di server: ' + qErr.message);
                     return;
@@ -2308,8 +2308,8 @@
                     );
                 }
 
-                const { error: txErr } = await supabase.from('transactions').insert(dbTransactions);
-                const { error: itemsErr } = await supabase.from('transaction_items').insert(dbTxItems);
+                const { error: txErr } = await supabaseClient.from('transactions').insert(dbTransactions);
+                const { error: itemsErr } = await supabaseClient.from('transaction_items').insert(dbTxItems);
 
                 if (txErr || itemsErr) {
                     console.error('Error inserting mock transactions:', txErr || itemsErr);
@@ -2350,7 +2350,7 @@
                     });
                 }
 
-                const { error: actErr } = await supabase.from('queues').insert([...activeQueues, ...waitingQueues]);
+                const { error: actErr } = await supabaseClient.from('queues').insert([...activeQueues, ...waitingQueues]);
                 if (actErr) {
                     console.error('Error inserting active/waiting mock queues:', actErr);
                 }
@@ -2797,7 +2797,7 @@
 
             if (isSupabaseConnected) {
                 // 1. Insert transaction row
-                const { error: txError } = await supabase.from('transactions').insert({
+                const { error: txError } = await supabaseClient.from('transactions').insert({
                     id: newTx.id,
                     queue_id: newTx.queueId,
                     ticket_number: newTx.ticketNumber,
@@ -2826,13 +2826,13 @@
                     qty: item.qty
                 }));
 
-                const { error: itemsError } = await supabase.from('transaction_items').insert(dbItems);
+                const { error: itemsError } = await supabaseClient.from('transaction_items').insert(dbItems);
                 if (itemsError) {
                     console.error('Error inserting transaction items:', itemsError);
                 }
 
                 // 3. Update queue status
-                await supabase.from('queues').update({ 
+                await supabaseClient.from('queues').update({ 
                     status: 'completed',
                     paid_at: new Date().toISOString()
                 }).eq('id', activeBillingPatient.id);
@@ -3029,7 +3029,7 @@
             }
 
             if (isSupabaseConnected) {
-                const { error } = await supabase.from('products').insert({ name, price });
+                const { error } = await supabaseClient.from('products').insert({ name, price });
                 if (error) {
                     alert('Gagal menambah produk ke cloud: ' + error.message);
                     return;
@@ -3053,7 +3053,7 @@
             const prod = products[index];
             if (confirm(`Apakah Anda yakin ingin menghapus "${prod.name}" dari katalog?`)) {
                 if (isSupabaseConnected) {
-                    const { error } = await supabase.from('products').delete().eq('id', prod.id);
+                    const { error } = await supabaseClient.from('products').delete().eq('id', prod.id);
                     if (error) {
                         alert('Gagal menghapus produk di cloud: ' + error.message);
                         return;
