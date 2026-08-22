@@ -860,6 +860,35 @@
             </div>
         </section>
 
+        <!-- 6. LOGIN VIEW -->
+        <section id="view-login" class="hidden max-w-md mx-auto my-8">
+            <div class="bg-white border border-brand-100 rounded-3xl p-8 shadow-xl">
+                <div class="text-center mb-6">
+                    <div class="h-12 w-12 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                        </svg>
+                    </div>
+                    <h3 class="font-bold text-slate-800 text-xl">Login Staf Klinik</h3>
+                    <p class="text-xs text-slate-400 mt-1 font-semibold">Masukkan kredensial Anda untuk mengakses panel loket / kasir</p>
+                </div>
+                
+                <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                    <div>
+                        <label for="login-username" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Username</label>
+                        <input type="text" id="login-username" required autocomplete="username" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Password</label>
+                        <input type="password" id="login-password" required autocomplete="current-password" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                    </div>
+                    <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md">
+                        Masuk ke Aplikasi
+                    </button>
+                </form>
+            </div>
+        </section>
+
     </main>
 
     <!-- FOOTER INFO no-print -->
@@ -1002,35 +1031,6 @@
             animation-play-state: paused;
         }
     </style>
-
-    <!-- 6. LOGIN VIEW -->
-    <section id="view-login" class="hidden max-w-md mx-auto my-12">
-        <div class="bg-white border border-brand-100 rounded-3xl p-8 shadow-xl">
-            <div class="text-center mb-6">
-                <div class="h-12 w-12 bg-brand-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                    </svg>
-                </div>
-                <h3 class="font-bold text-slate-800 text-xl">Login Staf Klinik</h3>
-                <p class="text-xs text-slate-400 mt-1 font-semibold">Masukkan kredensial Anda untuk mengakses panel loket / kasir</p>
-            </div>
-            
-            <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
-                <div>
-                    <label for="login-username" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Username</label>
-                    <input type="text" id="login-username" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
-                </div>
-                <div>
-                    <label for="login-password" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Password</label>
-                    <input type="password" id="login-password" required class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
-                </div>
-                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md">
-                    Masuk ke Aplikasi
-                </button>
-            </form>
-        </div>
-    </section>
 
     <!-- SYSTEM JAVASCRIPT CODE -->
     <script>
@@ -1280,7 +1280,8 @@
         // --- LIFE CYCLE INITIALIZATION ---
         window.addEventListener('DOMContentLoaded', () => {
             initializeData();
-            switchView('dashboard');
+            const initialTarget = currentUser ? (currentUser.role === 'operator' ? 'operator' : currentUser.role === 'cashier' ? 'cashier' : 'dashboard') : 'kiosk';
+            switchView(initialTarget);
             
             // Sync with other open browser tabs/windows (local storage fallback)
             window.addEventListener('storage', (event) => {
@@ -3167,7 +3168,13 @@
             // Fallback for offline/local emergency bypass
             if (!userMatch) {
                 if (username === 'admin' && passwordPlain === 'admin123') {
-                    userMatch = { username: 'admin', role: 'admin', display_name: 'Dr. Adit (Offline)' };
+                    userMatch = { username: 'admin', role: 'admin', display_name: 'Dr. Adit (Admin)' };
+                } else if (username === 'operator1' && passwordPlain === 'op123') {
+                    userMatch = { username: 'operator1', role: 'operator', display_name: 'Budi (Operator 1)', counter_name: 'Loket 1' };
+                } else if (username === 'operator2' && passwordPlain === 'op123') {
+                    userMatch = { username: 'operator2', role: 'operator', display_name: 'Siti (Operator 2)', counter_name: 'Loket 2' };
+                } else if (username === 'cashier1' && passwordPlain === 'cash123') {
+                    userMatch = { username: 'cashier1', role: 'cashier', display_name: 'Ani (Kasir)' };
                 }
             }
 
