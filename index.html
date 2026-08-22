@@ -874,13 +874,21 @@
                 </div>
                 
                 <form id="login-form" onsubmit="handleLoginSubmit(event)" class="space-y-4">
+                    <!-- Inline Error Message -->
+                    <div id="login-error-msg" class="hidden bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold px-4 py-3 rounded-xl flex items-center gap-2.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 shrink-0 text-rose-500" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                        </svg>
+                        <span id="login-error-text">Username atau password yang dimasukkan salah.</span>
+                    </div>
+
                     <div>
                         <label for="login-username" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Username</label>
-                        <input type="text" id="login-username" required autocomplete="username" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                        <input type="text" id="login-username" required autocomplete="username" oninput="document.getElementById('login-error-msg').classList.add('hidden')" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
                     </div>
                     <div>
                         <label for="login-password" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Password</label>
-                        <input type="password" id="login-password" required autocomplete="current-password" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                        <input type="password" id="login-password" required autocomplete="current-password" oninput="document.getElementById('login-error-msg').classList.add('hidden')" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
                     </div>
                     <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-bold py-3 rounded-xl text-sm transition shadow-md">
                         Masuk ke Aplikasi
@@ -3138,11 +3146,17 @@
         // Login Submit Handler
         async function handleLoginSubmit(e) {
             e.preventDefault();
+            const errorMsg = document.getElementById('login-error-msg');
+            if (errorMsg) errorMsg.classList.add('hidden');
+
             const username = document.getElementById('login-username').value.trim();
             const passwordPlain = document.getElementById('login-password').value.trim();
             
             if (!username || !passwordPlain) {
-                alert('Silakan masukkan username dan password.');
+                if (errorMsg) {
+                    document.getElementById('login-error-text').textContent = 'Silakan masukkan username dan password.';
+                    errorMsg.classList.remove('hidden');
+                }
                 return;
             }
 
@@ -3194,13 +3208,22 @@
                 }
 
                 document.getElementById('login-form').reset();
+                if (errorMsg) errorMsg.classList.add('hidden');
                 updateNavigationUI();
                 
                 const target = redirectAfterLogin || (currentUser.role === 'operator' ? 'operator' : currentUser.role === 'cashier' ? 'cashier' : 'dashboard');
                 redirectAfterLogin = null;
                 switchView(target);
             } else {
-                alert('Username atau password salah! (Gunakan admin/admin123 jika offline)');
+                if (errorMsg) {
+                    document.getElementById('login-error-text').textContent = 'Username atau password yang dimasukkan salah.';
+                    errorMsg.classList.remove('hidden');
+                }
+                const passInput = document.getElementById('login-password');
+                if (passInput) {
+                    passInput.value = '';
+                    passInput.focus();
+                }
             }
         }
 
