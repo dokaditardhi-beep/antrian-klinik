@@ -568,6 +568,23 @@
                         </button>
                     </div>
                 </div>
+
+                <!-- Offline Data Sync Status Sub-card -->
+                <div class="mt-5 pt-4 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-slate-50 p-4 rounded-xl">
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-brand-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            <span class="text-xs font-bold text-slate-800">Auto-Sync Data Offline</span>
+                        </div>
+                        <p class="text-[11px] text-slate-500 mt-0.5" id="settings-offline-sync-text">Memeriksa data offline lokal...</p>
+                    </div>
+                    <button onclick="syncOfflineDataToSupabase(true)" id="btn-manual-sync" class="bg-white border border-brand-200 hover:bg-brand-50 text-brand-700 text-xs font-bold py-2 px-4 rounded-lg transition shadow-xs flex items-center gap-1.5">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>
+                        Sinkronkan Sekarang
+                    </button>
+                </div>
             </div>
 
             <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
@@ -1131,14 +1148,238 @@
             if (keyInput) keyInput.value = supabaseAnonKey;
 
             if (badge) {
-                if (isSupabaseConnected) {
+                if (isSupabaseConnected && navigator.onLine) {
                     badge.innerHTML = `<span class="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span> Terhubung ke Supabase (Cloud)`;
                     badge.className = "flex items-center gap-1.5 text-xs font-semibold text-emerald-600";
+                } else if (isSupabaseConnected && !navigator.onLine) {
+                    badge.innerHTML = `<span class="w-2.5 h-2.5 bg-amber-500 rounded-full"></span> Terhubung (Koneksi Internet Terputus)`;
+                    badge.className = "flex items-center gap-1.5 text-xs font-semibold text-amber-600";
                 } else {
                     badge.innerHTML = `<span class="w-2.5 h-2.5 bg-rose-500 rounded-full"></span> Terputus / Mode Lokal (Offline)`;
                     badge.className = "flex items-center gap-1.5 text-xs font-semibold text-rose-600";
                 }
             }
+            updateOfflineSyncBadgeUI();
+        }
+
+        // --- OFFLINE AUTO-SYNC ENGINE ---
+        function getOfflineSyncQueue() {
+            try {
+                return JSON.parse(localStorage.getItem('antrian_offline_sync_queue')) || { queues: [], queueUpdates: [], transactions: [] };
+            } catch (e) {
+                return { queues: [], queueUpdates: [], transactions: [] };
+            }
+        }
+
+        function saveOfflineSyncQueue(syncData) {
+            localStorage.setItem('antrian_offline_sync_queue', JSON.stringify(syncData));
+            updateOfflineSyncBadgeUI();
+        }
+
+        function addQueueToOfflineSync(item) {
+            const syncData = getOfflineSyncQueue();
+            syncData.queues.push(item);
+            saveOfflineSyncQueue(syncData);
+        }
+
+        function addQueueUpdateToOfflineSync(id, formattedNumber, payload) {
+            const syncData = getOfflineSyncQueue();
+            syncData.queueUpdates.push({ id, formattedNumber, payload, updatedAt: new Date().toISOString() });
+            saveOfflineSyncQueue(syncData);
+        }
+
+        function addTransactionToOfflineSync(tx) {
+            const syncData = getOfflineSyncQueue();
+            syncData.transactions.push(tx);
+            saveOfflineSyncQueue(syncData);
+        }
+
+        function updateOfflineSyncBadgeUI() {
+            const syncTextEl = document.getElementById('settings-offline-sync-text');
+            const syncBtnEl = document.getElementById('btn-manual-sync');
+            const syncData = getOfflineSyncQueue();
+            const qCount = (syncData.queues || []).length;
+            const updCount = (syncData.queueUpdates || []).length;
+            const txCount = (syncData.transactions || []).length;
+            const total = qCount + updCount + txCount;
+
+            if (syncTextEl) {
+                if (total === 0) {
+                    syncTextEl.textContent = "Semua data lokal telah tersinkron dengan Cloud.";
+                    syncTextEl.className = "text-[11px] text-emerald-600 font-semibold mt-0.5";
+                } else {
+                    syncTextEl.textContent = `Ada ${total} data offline menunggu sinkronisasi (${qCount} antrean, ${txCount} transaksi).`;
+                    syncTextEl.className = "text-[11px] text-amber-600 font-semibold mt-0.5";
+                }
+            }
+
+            if (syncBtnEl) {
+                if (isSyncingOffline) {
+                    syncBtnEl.innerHTML = `<svg class="animate-spin h-3.5 w-3.5 text-brand-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"></path></svg> Menyinkronkan...`;
+                    syncBtnEl.disabled = true;
+                } else {
+                    syncBtnEl.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg> Sinkronkan Sekarang ${total > 0 ? `(${total})` : ''}`;
+                    syncBtnEl.disabled = !navigator.onLine || !isSupabaseConnected;
+                }
+            }
+        }
+
+        let isSyncingOffline = false;
+        async function syncOfflineDataToSupabase(manualTrigger = false) {
+            if (isSyncingOffline || !supabaseClient || !isSupabaseConnected || !navigator.onLine) {
+                if (manualTrigger && !navigator.onLine) {
+                    showGlobalSyncToast("Gagal: Komputer sedang tidak terhubung ke internet.", false);
+                }
+                return;
+            }
+
+            const syncData = getOfflineSyncQueue();
+            const total = (syncData.queues.length + syncData.queueUpdates.length + syncData.transactions.length);
+            if (total === 0) {
+                if (manualTrigger) showGlobalSyncToast("Semua data sudah tersinkronisasi.", true);
+                updateOfflineSyncBadgeUI();
+                return;
+            }
+
+            isSyncingOffline = true;
+            updateOfflineSyncBadgeUI();
+            let successCount = 0;
+
+            try {
+                // 1. Sync offline queues
+                const remainingQueues = [];
+                for (const q of syncData.queues) {
+                    try {
+                        const { data, error } = await supabaseClient.from('queues').insert({
+                            category: q.category,
+                            prefix: q.prefix,
+                            number: q.number,
+                            formatted_number: q.formattedNumber,
+                            status: q.status || 'waiting',
+                            counter: q.counter || null,
+                            called_at: q.calledAt || null,
+                            paid_at: q.paidAt || null,
+                            created_at: q.createdAt || new Date().toISOString()
+                        }).select().single();
+
+                        if (!error && data) {
+                            successCount++;
+                            const localIdx = queues.findIndex(item => item.id === q.id || (item.formattedNumber === q.formattedNumber && item.createdAt === q.createdAt));
+                            if (localIdx !== -1) {
+                                queues[localIdx].id = data.id;
+                            }
+                        } else {
+                            remainingQueues.push(q);
+                        }
+                    } catch (e) {
+                        remainingQueues.push(q);
+                    }
+                }
+                syncData.queues = remainingQueues;
+
+                // 2. Sync offline queue updates
+                const remainingUpdates = [];
+                for (const upd of syncData.queueUpdates) {
+                    try {
+                        let query = supabaseClient.from('queues').update(upd.payload);
+                        if (upd.id && String(upd.id).length < 12) {
+                            query = query.eq('id', upd.id);
+                        } else if (upd.formattedNumber) {
+                            query = query.eq('formatted_number', upd.formattedNumber);
+                        }
+                        const { error } = await query;
+                        if (!error) {
+                            successCount++;
+                        } else {
+                            remainingUpdates.push(upd);
+                        }
+                    } catch (e) {
+                        remainingUpdates.push(upd);
+                    }
+                }
+                syncData.queueUpdates = remainingUpdates;
+
+                // 3. Sync offline transactions
+                const remainingTxs = [];
+                for (const tx of syncData.transactions) {
+                    try {
+                        const { error: txError } = await supabaseClient.from('transactions').insert({
+                            id: tx.id,
+                            queue_id: (tx.queueId && String(tx.queueId).length < 12) ? tx.queueId : null,
+                            ticket_number: tx.ticketNumber,
+                            patient_category: tx.patientCategory,
+                            subtotal: tx.subtotal,
+                            discount: tx.discount,
+                            tax: tx.tax,
+                            total: tx.total,
+                            payment_method: tx.paymentMethod,
+                            amount_paid: tx.amountPaid,
+                            change: tx.change,
+                            created_at: tx.createdAt
+                        });
+
+                        if (!txError) {
+                            if (tx.items && tx.items.length > 0) {
+                                const dbItems = tx.items.map(item => ({
+                                    transaction_id: tx.id,
+                                    product_id: (item.id && Number(item.id) < 1000000000000) ? item.id : null,
+                                    name: item.name,
+                                    price: item.price,
+                                    qty: item.qty
+                                }));
+                                await supabaseClient.from('transaction_items').insert(dbItems);
+                            }
+                            successCount++;
+                        } else {
+                            remainingTxs.push(tx);
+                        }
+                    } catch (e) {
+                        remainingTxs.push(tx);
+                    }
+                }
+                syncData.transactions = remainingTxs;
+
+                saveOfflineSyncQueue(syncData);
+
+                if (successCount > 0) {
+                    showGlobalSyncToast(`✅ Berhasil: ${successCount} data offline tersinkronkan ke Cloud!`, true);
+                    await Promise.all([
+                        loadQueuesFromSupabase(),
+                        loadTransactionsFromSupabase()
+                    ]);
+                    updateUI();
+                }
+            } catch (err) {
+                console.error("Auto-sync error:", err);
+            } finally {
+                isSyncingOffline = false;
+                updateOfflineSyncBadgeUI();
+            }
+        }
+
+        function showGlobalSyncToast(message, isSuccess = true) {
+            const toast = document.getElementById('global-sync-toast');
+            const icon = document.getElementById('global-sync-toast-icon');
+            const msgEl = document.getElementById('global-sync-toast-msg');
+            const titleEl = document.getElementById('global-sync-toast-title');
+            if (!toast) return;
+
+            if (isSuccess) {
+                icon.className = "bg-emerald-500 rounded-full p-1.5 flex items-center justify-center";
+                titleEl.textContent = "Sinkronisasi Cloud";
+            } else {
+                icon.className = "bg-rose-500 rounded-full p-1.5 flex items-center justify-center";
+                titleEl.textContent = "Koneksi Offline";
+            }
+
+            msgEl.textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0', 'pointer-events-none');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0', 'pointer-events-none');
+            }, 4500);
         }
 
         function saveSupabaseConfig() {
@@ -1343,6 +1584,30 @@
                     }
                 };
             }
+
+            // Online / Offline Auto-Sync Listeners
+            window.addEventListener('online', async () => {
+                console.log("[Network] Internet kembali ONLINE.");
+                updateSupabaseStatusUI();
+                if (!isSupabaseConnected && supabaseUrl && supabaseAnonKey) {
+                    initSupabase();
+                }
+                showGlobalSyncToast("Koneksi Internet Pulih. Memeriksa sinkronisasi...", true);
+                await syncOfflineDataToSupabase();
+            });
+
+            window.addEventListener('offline', () => {
+                console.warn("[Network] Internet TERPUTUS. Beralih ke mode offline.");
+                updateSupabaseStatusUI();
+                showGlobalSyncToast("Internet Terputus: Sistem beralih ke penyimpanan lokal offline.", false);
+            });
+
+            // Periodic auto-sync worker every 25 seconds
+            setInterval(() => {
+                if (navigator.onLine && isSupabaseConnected) {
+                    syncOfflineDataToSupabase();
+                }
+            }, 25000);
         });
 
         // Initialize defaults in localStorage or load from Supabase
@@ -1360,7 +1625,10 @@
             
             initSupabase();
 
-            if (isSupabaseConnected) {
+            if (isSupabaseConnected && navigator.onLine) {
+                // Check & upload any pending offline data first
+                await syncOfflineDataToSupabase();
+
                 await Promise.all([
                     loadClinicInfoFromSupabase(),
                     loadCountersFromSupabase(),
@@ -1614,55 +1882,66 @@
         }
 
         // Operator triggers calling
-        // Operator triggers calling
         async function callNextQueue(category) {
             // Selesai-kan antrean aktif sebelumnya di loket ini jika ada dan arahkan ke kasir
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (activeCall) {
-                if (isSupabaseConnected) {
-                    await supabaseClient.from('queues').update({ status: 'waiting_payment' }).eq('id', activeCall.id);
+                if (isSupabaseConnected && navigator.onLine) {
+                    try {
+                        await supabaseClient.from('queues').update({ status: 'waiting_payment' }).eq('id', activeCall.id);
+                    } catch (e) {
+                        activeCall.status = 'waiting_payment';
+                        addQueueUpdateToOfflineSync(activeCall.id, activeCall.formattedNumber, { status: 'waiting_payment' });
+                    }
                 } else {
                     activeCall.status = 'waiting_payment';
+                    addQueueUpdateToOfflineSync(activeCall.id, activeCall.formattedNumber, { status: 'waiting_payment' });
                 }
             }
 
             // Ambil nomor antrean waiting tertua untuk kategori terpilih
             const target = queues.find(q => q.category === category && q.status === 'waiting');
             if (!target) {
-                // If we finished the previous one, reload list
-                if (isSupabaseConnected && activeCall) {
+                if (isSupabaseConnected && navigator.onLine && activeCall) {
                     await loadQueuesFromSupabase();
-                } else if (!isSupabaseConnected && activeCall) {
+                } else if (activeCall) {
                     saveQueues();
                 }
                 updateUI();
                 return;
             }
 
-            if (isSupabaseConnected) {
-                const { error } = await supabaseClient
-                    .from('queues')
-                    .update({ 
-                        status: 'calling', 
-                        counter: opSelectedCounter, 
-                        called_at: new Date().toISOString() 
-                    })
-                    .eq('id', target.id);
-                    
-                if (error) {
-                    alert('Gagal memperbarui antrean di server: ' + error.message);
-                    return;
+            let savedToCloud = false;
+            if (isSupabaseConnected && navigator.onLine) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('queues')
+                        .update({ 
+                            status: 'calling', 
+                            counter: opSelectedCounter, 
+                            called_at: new Date().toISOString() 
+                        })
+                        .eq('id', target.id);
+                        
+                    if (!error) {
+                        savedToCloud = true;
+                        await loadQueuesFromSupabase();
+                    }
+                } catch (e) {
+                    console.warn("Koneksi Supabase error saat panggil antrean, beralih ke lokal:", e);
                 }
-                
-                await loadQueuesFromSupabase();
-            } else {
+            }
+
+            if (!savedToCloud) {
                 target.status = 'calling';
                 target.counter = opSelectedCounter;
                 target.calledAt = new Date().toISOString();
-
                 saveQueues();
-                
-                // Broadcast event to notify monitor screen (local fallback)
+                addQueueUpdateToOfflineSync(target.id, target.formattedNumber, { 
+                    status: 'calling', 
+                    counter: opSelectedCounter, 
+                    called_at: target.calledAt 
+                });
                 triggerCallNotification(target);
             }
             
@@ -1673,26 +1952,34 @@
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (!activeCall) return;
 
-            if (isSupabaseConnected) {
-                // Touch called_at to trigger realtime event update on queues table
-                const { error } = await supabaseClient
-                    .from('queues')
-                    .update({ 
-                        status: 'calling', 
-                        called_at: new Date().toISOString() 
-                    })
-                    .eq('id', activeCall.id);
-                    
-                if (error) {
-                    alert('Gagal panggil ulang di server: ' + error.message);
-                    return;
+            let savedToCloud = false;
+            if (isSupabaseConnected && navigator.onLine) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('queues')
+                        .update({ 
+                            status: 'calling', 
+                            called_at: new Date().toISOString() 
+                        })
+                        .eq('id', activeCall.id);
+                        
+                    if (!error) {
+                        savedToCloud = true;
+                        await loadQueuesFromSupabase();
+                    }
+                } catch (e) {
+                    console.warn("Panggil ulang via cloud gagal, fallback ke lokal:", e);
                 }
-                
-                await loadQueuesFromSupabase();
-            } else {
-                activeCall.status = 'calling'; // set to calling state to pulse UI
-                saveQueues();
+            }
 
+            if (!savedToCloud) {
+                activeCall.status = 'calling';
+                activeCall.calledAt = new Date().toISOString();
+                saveQueues();
+                addQueueUpdateToOfflineSync(activeCall.id, activeCall.formattedNumber, { 
+                    status: 'calling', 
+                    called_at: activeCall.calledAt 
+                });
                 triggerCallNotification(activeCall);
             }
             
@@ -1713,21 +2000,27 @@
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (!activeCall) return;
 
-            if (isSupabaseConnected) {
-                const { error } = await supabaseClient
-                    .from('queues')
-                    .update({ status: 'waiting_payment' })
-                    .eq('id', activeCall.id);
-                    
-                if (error) {
-                    alert('Gagal menyelesaikan panggilan: ' + error.message);
-                    return;
+            let savedToCloud = false;
+            if (isSupabaseConnected && navigator.onLine) {
+                try {
+                    const { error } = await supabaseClient
+                        .from('queues')
+                        .update({ status: 'waiting_payment' })
+                        .eq('id', activeCall.id);
+                        
+                    if (!error) {
+                        savedToCloud = true;
+                        await loadQueuesFromSupabase();
+                    }
+                } catch (e) {
+                    console.warn("Selesaikan panggilan via cloud gagal, fallback ke lokal:", e);
                 }
-                
-                await loadQueuesFromSupabase();
-            } else {
+            }
+
+            if (!savedToCloud) {
                 activeCall.status = 'waiting_payment';
                 saveQueues();
+                addQueueUpdateToOfflineSync(activeCall.id, activeCall.formattedNumber, { status: 'waiting_payment' });
             }
             updateUI();
         }
@@ -1998,35 +2291,41 @@
                 counter: null
             };
 
-            if (isSupabaseConnected) {
-                const { data, error } = await supabaseClient
-                    .from('queues')
-                    .insert({
-                        category: newItem.category,
-                        prefix: newItem.prefix,
-                        number: newItem.number,
-                        formatted_number: newItem.formattedNumber,
-                        status: newItem.status
-                    })
-                    .select()
-                    .single();
-                
-                if (error) {
-                    alert('Gagal menyambung ke server Supabase: ' + error.message);
-                    return;
+            let savedToCloud = false;
+            if (isSupabaseConnected && navigator.onLine) {
+                try {
+                    const { data, error } = await supabaseClient
+                        .from('queues')
+                        .insert({
+                            category: newItem.category,
+                            prefix: newItem.prefix,
+                            number: newItem.number,
+                            formatted_number: newItem.formattedNumber,
+                            status: newItem.status
+                        })
+                        .select()
+                        .single();
+                    
+                    if (!error && data) {
+                        newItem.id = data.id;
+                        newItem.createdAt = data.created_at;
+                        savedToCloud = true;
+                        await loadQueuesFromSupabase();
+                    } else {
+                        console.warn("Gagal insert ke Supabase, beralih ke offline:", error);
+                    }
+                } catch (e) {
+                    console.warn("Exception saat koneksi Supabase, beralih ke offline:", e);
                 }
-                
-                newItem.id = data.id;
-                newItem.createdAt = data.created_at;
-                
-                // Fetch fresh list
-                await loadQueuesFromSupabase();
-            } else {
+            }
+
+            if (!savedToCloud) {
                 newItem.id = new Date().getTime();
                 newItem.createdAt = new Date().toISOString();
-                
                 queues.push(newItem);
                 saveQueues();
+                addQueueToOfflineSync(newItem);
+                showGlobalSyncToast(`Tiket ${newItem.formattedNumber} disimpan di lokal (Offline).`, false);
             }
 
             updateUI();
@@ -2873,64 +3172,73 @@
                 createdAt: new Date().toISOString()
             };
 
-            if (isSupabaseConnected) {
-                // 1. Insert transaction row
-                const { error: txError } = await supabaseClient.from('transactions').insert({
-                    id: newTx.id,
-                    queue_id: newTx.queueId,
-                    ticket_number: newTx.ticketNumber,
-                    patient_category: newTx.patientCategory,
-                    subtotal: newTx.subtotal,
-                    discount: newTx.discount,
-                    tax: newTx.tax,
-                    total: newTx.total,
-                    payment_method: newTx.paymentMethod,
-                    amount_paid: newTx.amountPaid,
-                    change: newTx.change,
-                    created_at: newTx.createdAt
-                });
+            let savedToCloud = false;
+            if (isSupabaseConnected && navigator.onLine) {
+                try {
+                    // 1. Insert transaction row
+                    const { error: txError } = await supabaseClient.from('transactions').insert({
+                        id: newTx.id,
+                        queue_id: (newTx.queueId && String(newTx.queueId).length < 12) ? newTx.queueId : null,
+                        ticket_number: newTx.ticketNumber,
+                        patient_category: newTx.patientCategory,
+                        subtotal: newTx.subtotal,
+                        discount: newTx.discount,
+                        tax: newTx.tax,
+                        total: newTx.total,
+                        payment_method: newTx.paymentMethod,
+                        amount_paid: newTx.amountPaid,
+                        change: newTx.change,
+                        created_at: newTx.createdAt
+                    });
 
-                if (txError) {
-                    alert('Gagal menyimpan transaksi ke server: ' + txError.message);
-                    return;
+                    if (!txError) {
+                        // 2. Insert transaction items
+                        const dbItems = newTx.items.map(item => ({
+                            transaction_id: newTx.id,
+                            product_id: (item.id && Number(item.id) < 1000000000000) ? item.id : null,
+                            name: item.name,
+                            price: item.price,
+                            qty: item.qty
+                        }));
+
+                        await supabaseClient.from('transaction_items').insert(dbItems);
+
+                        // 3. Update queue status
+                        await supabaseClient.from('queues').update({ 
+                            status: 'completed',
+                            paid_at: new Date().toISOString()
+                        }).eq('id', activeBillingPatient.id);
+                        
+                        savedToCloud = true;
+                        await Promise.all([
+                            loadQueuesFromSupabase(),
+                            loadTransactionsFromSupabase()
+                        ]);
+                    } else {
+                        console.warn("Gagal menyimpan transaksi ke Cloud, beralih ke offline:", txError);
+                    }
+                } catch (e) {
+                    console.warn("Exception koneksi Supabase saat proses pembayaran, beralih ke offline:", e);
                 }
+            }
 
-                // 2. Insert transaction items
-                const dbItems = newTx.items.map(item => ({
-                    transaction_id: newTx.id,
-                    product_id: item.id > 1000000000000 ? null : item.id, // ignore custom timestamp id in fk
-                    name: item.name,
-                    price: item.price,
-                    qty: item.qty
-                }));
-
-                const { error: itemsError } = await supabaseClient.from('transaction_items').insert(dbItems);
-                if (itemsError) {
-                    console.error('Error inserting transaction items:', itemsError);
-                }
-
-                // 3. Update queue status
-                await supabaseClient.from('queues').update({ 
-                    status: 'completed',
-                    paid_at: new Date().toISOString()
-                }).eq('id', activeBillingPatient.id);
-                
-                // Fetch recent updates
-                await Promise.all([
-                    loadQueuesFromSupabase(),
-                    loadTransactionsFromSupabase()
-                ]);
-            } else {
+            if (!savedToCloud) {
                 // LocalStorage fallback
                 transactions.push(newTx);
                 localStorage.setItem('antrian_transactions', JSON.stringify(transactions));
+                addTransactionToOfflineSync(newTx);
 
-                const qIdx = queues.findIndex(q => q.id === activeBillingPatient.id);
+                const qIdx = queues.findIndex(q => q.id === activeBillingPatient.id || q.formattedNumber === activeBillingPatient.formattedNumber);
                 if (qIdx !== -1) {
                     queues[qIdx].status = 'completed';
                     queues[qIdx].paidAt = new Date().toISOString();
                     saveQueues();
+                    addQueueUpdateToOfflineSync(activeBillingPatient.id, activeBillingPatient.formattedNumber, { 
+                        status: 'completed', 
+                        paid_at: queues[qIdx].paidAt 
+                    });
                 }
+                showGlobalSyncToast(`Transaksi ${newTx.id} tersimpan lokal (Offline). Akan otomatis disinkronkan saat online.`, false);
             }
 
             // Clean active states
@@ -3365,5 +3673,16 @@
             return false;
         }
     </script>
+
+    <!-- FLOATING AUTO-SYNC TOAST NOTIFICATION -->
+    <div id="global-sync-toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 pointer-events-none transition-all duration-300 bg-slate-900/95 text-white px-4 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border border-slate-700/50">
+        <span id="global-sync-toast-icon" class="bg-emerald-500 rounded-full p-1.5 flex items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+        </span>
+        <div>
+            <p class="font-bold text-xs" id="global-sync-toast-title">Sinkronisasi Cloud</p>
+            <p class="text-slate-400 text-[10px]" id="global-sync-toast-msg">Data offline berhasil disinkronkan.</p>
+        </div>
+    </div>
 </body>
 </html>
