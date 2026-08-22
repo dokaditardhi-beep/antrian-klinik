@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistem Antrean Klinik - UMUM & BPJS</title>
+    <!-- Supabase SDK & Config -->
+    <script src="env.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -518,6 +521,36 @@
 
         <!-- 5. SETTINGS VIEW -->
         <section id="view-settings" class="hidden max-w-4xl mx-auto space-y-6">
+            <!-- Supabase Configuration -->
+            <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
+                <h3 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4 flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-brand-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                    </svg>
+                    Koneksi Database Cloud (Supabase)
+                </h3>
+                
+                <div class="space-y-4">
+                    <div>
+                        <label for="settings-sb-url" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Supabase API URL</label>
+                        <input type="text" id="settings-sb-url" placeholder="Contoh: https://xxxx.supabase.co" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition">
+                    </div>
+                    <div>
+                        <label for="settings-sb-key" class="block text-xs font-bold text-slate-400 tracking-wider uppercase mb-1">Supabase Anon Key</label>
+                        <textarea id="settings-sb-key" placeholder="Masukkan Anon API Key" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-800 focus:outline-none focus:border-brand-500 focus:bg-white transition font-mono"></textarea>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center gap-1.5 text-xs font-semibold" id="settings-sb-status-badge">
+                            <span class="w-2.5 h-2.5 bg-slate-400 rounded-full"></span>
+                            Status: Belum Terhubung
+                        </div>
+                        <button onclick="saveSupabaseConfig()" class="bg-brand-600 hover:bg-brand-700 text-white font-bold py-2 px-5 rounded-xl text-sm transition shadow-sm">
+                            Simpan & Hubungkan
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div class="bg-white border border-brand-100 rounded-2xl p-6 shadow-sm">
                 <h3 class="font-bold text-slate-800 text-lg border-b border-slate-100 pb-3 mb-4">Pengaturan Informasi Klinik</h3>
                 
@@ -982,8 +1015,8 @@
             { id: 9, name: "Jasa Tindakan Medis Ringan", price: 75000 }
         ];
 
-        let products = JSON.parse(localStorage.getItem('antrian_products')) || DEFAULT_PRODUCTS;
-        let transactions = JSON.parse(localStorage.getItem('antrian_transactions')) || [];
+        let products = [];
+        let transactions = [];
         
         let activeBillingPatient = null;
         let billingItems = [];
@@ -992,19 +1025,223 @@
 
         // Session states
         let currentView = 'dashboard';
-        let opSelectedCounter = localStorage.getItem('antrian_op_counter') || counters[0] || 'Loket 1';
+        let opSelectedCounter = 'Loket 1';
         let opSelectedListTab = 'all'; // 'all', 'UMUM', 'BPJS'
 
         // Audio Settings
         let syntheticVoicesLoaded = false;
+
+        // Supabase Database Connection variables
+        let supabaseUrl = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.SUPABASE_URL) || localStorage.getItem('supabase_url') || "";
+        let supabaseAnonKey = (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.SUPABASE_ANON_KEY) || localStorage.getItem('supabase_anon_key') || "";
+        let supabase = null;
+        let isSupabaseConnected = false;
+        let supabaseSubscription = null;
+
+        function initSupabase() {
+            if (supabaseUrl && supabaseAnonKey) {
+                try {
+                    supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
+                    isSupabaseConnected = true;
+                    console.log("Supabase client initialized.");
+                    setupSupabaseRealtime();
+                } catch (e) {
+                    console.error("Failed to initialize Supabase client:", e);
+                    isSupabaseConnected = false;
+                }
+            } else {
+                isSupabaseConnected = false;
+                console.warn("Supabase credentials not configured.");
+            }
+            updateSupabaseStatusUI();
+        }
+
+        function updateSupabaseStatusUI() {
+            const badge = document.getElementById('settings-sb-status-badge');
+            const urlInput = document.getElementById('settings-sb-url');
+            const keyInput = document.getElementById('settings-sb-key');
+
+            if (urlInput) urlInput.value = supabaseUrl;
+            if (keyInput) keyInput.value = supabaseAnonKey;
+
+            if (badge) {
+                if (isSupabaseConnected) {
+                    badge.innerHTML = `<span class="w-2.5 h-2.5 bg-emerald-500 rounded-full"></span> Terhubung ke Supabase (Cloud)`;
+                    badge.className = "flex items-center gap-1.5 text-xs font-semibold text-emerald-600";
+                } else {
+                    badge.innerHTML = `<span class="w-2.5 h-2.5 bg-rose-500 rounded-full"></span> Terputus / Mode Lokal (Offline)`;
+                    badge.className = "flex items-center gap-1.5 text-xs font-semibold text-rose-600";
+                }
+            }
+        }
+
+        function saveSupabaseConfig() {
+            const url = document.getElementById('settings-sb-url').value.trim();
+            const key = document.getElementById('settings-sb-key').value.trim();
+
+            if (!url || !key) {
+                if (confirm('Kosongkan konfigurasi Supabase dan kembali ke mode Lokal (Offline)?')) {
+                    supabaseUrl = "";
+                    supabaseAnonKey = "";
+                    localStorage.removeItem('supabase_url');
+                    localStorage.removeItem('supabase_anon_key');
+                    isSupabaseConnected = false;
+                    supabase = null;
+                    if (supabaseSubscription) {
+                        supabase.removeChannel(supabaseSubscription);
+                        supabaseSubscription = null;
+                    }
+                    initializeData();
+                    alert('Konfigurasi dibersihkan. Aplikasi beralih ke mode lokal.');
+                }
+                return;
+            }
+
+            supabaseUrl = url;
+            supabaseAnonKey = key;
+            localStorage.setItem('supabase_url', url);
+            localStorage.setItem('supabase_anon_key', key);
+            
+            initSupabase();
+            initializeData();
+            alert('Koneksi Supabase berhasil disimpan dan dihubungkan!');
+        }
+
+        function setupSupabaseRealtime() {
+            if (!supabase || !isSupabaseConnected) return;
+
+            if (supabaseSubscription) {
+                supabase.removeChannel(supabaseSubscription);
+            }
+
+            supabaseSubscription = supabase
+                .channel('realtime-clinic-changes')
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'queues' }, async (payload) => {
+                    console.log("Realtime event on queues:", payload);
+                    
+                    // Fetch fresh queue data
+                    await loadQueuesFromSupabase();
+
+                    // Sound calling announcements
+                    if (currentView === 'monitor' && payload.eventType === 'UPDATE' && payload.new.status === 'calling' && payload.old.status !== 'calling') {
+                        handleMonitorAnnouncement({
+                            id: payload.new.id,
+                            formattedNumber: payload.new.formatted_number,
+                            prefix: payload.new.prefix,
+                            number: payload.new.number,
+                            counter: payload.new.counter,
+                            category: payload.new.category,
+                            voice: true
+                        });
+                    }
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'clinic_info' }, async () => {
+                    await loadClinicInfoFromSupabase();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'counters' }, async () => {
+                    await loadCountersFromSupabase();
+                })
+                .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
+                    await loadProductsFromSupabase();
+                })
+                .subscribe();
+        }
+
+        async function loadClinicInfoFromSupabase() {
+            if (!isSupabaseConnected) return;
+            const { data, error } = await supabase.from('clinic_info').select('*').eq('id', 1).single();
+            if (data && !error) {
+                clinicInfo = data;
+                updateUI();
+            }
+        }
+
+        async function loadCountersFromSupabase() {
+            if (!isSupabaseConnected) return;
+            const { data, error } = await supabase.from('counters').select('name').order('id', { ascending: true });
+            if (data && !error) {
+                counters = data.map(c => c.name);
+                updateCounterOptions();
+                updateUI();
+            }
+        }
+
+        async function loadProductsFromSupabase() {
+            if (!isSupabaseConnected) return;
+            const { data, error } = await supabase.from('products').select('*').order('id', { ascending: true });
+            if (data && !error) {
+                products = data;
+                if (currentView === 'cashier') renderCashierWorkspace();
+                if (currentView === 'settings') renderProductsSettings();
+            }
+        }
+
+        async function loadQueuesFromSupabase() {
+            if (!isSupabaseConnected) return;
+            const { data, error } = await supabase.from('queues').select('*').order('id', { ascending: true });
+            if (data && !error) {
+                queues = data.map(q => ({
+                    id: q.id,
+                    category: q.category,
+                    prefix: q.prefix,
+                    number: q.number,
+                    formattedNumber: q.formatted_number,
+                    status: q.status,
+                    counter: q.counter,
+                    createdAt: q.created_at,
+                    calledAt: q.called_at,
+                    paidAt: q.paid_at
+                }));
+                updateUI();
+                if (currentView === 'cashier') renderCashierWorkspace();
+            }
+        }
+
+        async function loadTransactionsFromSupabase() {
+            if (!isSupabaseConnected) return;
+            const todayStart = new Date();
+            todayStart.setHours(0,0,0,0);
+            
+            const { data, error } = await supabase
+                .from('transactions')
+                .select('*, transaction_items(*)')
+                .gte('created_at', todayStart.toISOString())
+                .order('created_at', { ascending: false });
+
+            if (data && !error) {
+                transactions = data.map(t => ({
+                    id: t.id,
+                    queueId: t.queue_id,
+                    ticketNumber: t.ticket_number,
+                    patientCategory: t.patient_category,
+                    subtotal: Number(t.subtotal),
+                    discount: Number(t.discount),
+                    tax: Number(t.tax),
+                    total: Number(t.total),
+                    paymentMethod: t.payment_method,
+                    amountPaid: Number(t.amount_paid),
+                    change: Number(t.change),
+                    createdAt: t.created_at,
+                    items: t.transaction_items.map(ti => ({
+                        id: ti.id,
+                        name: ti.name,
+                        price: Number(ti.price),
+                        qty: ti.qty
+                    }))
+                }));
+                if (currentView === 'cashier') renderCashierWorkspace();
+            }
+        }
         
         // --- LIFE CYCLE INITIALIZATION ---
         window.addEventListener('DOMContentLoaded', () => {
             initializeData();
             switchView('dashboard');
             
-            // Sync with other open browser tabs/windows
+            // Sync with other open browser tabs/windows (local storage fallback)
             window.addEventListener('storage', (event) => {
+                if (isSupabaseConnected) return; // Skip local storage sync if connected to Supabase
+                
                 if (event.key === 'antrian_queues') {
                     queues = JSON.parse(event.newValue) || [];
                     updateUI();
@@ -1023,7 +1260,6 @@
                     transactions = JSON.parse(event.newValue) || [];
                     if (currentView === 'cashier') renderCashierWorkspace();
                 } else if (event.key === 'antrian_active_call_trigger') {
-                    // Triggers when a counter panggil/recall something
                     const callDetail = JSON.parse(event.newValue);
                     if (currentView === 'monitor' && callDetail) {
                         handleMonitorAnnouncement(callDetail);
@@ -1031,7 +1267,6 @@
                 }
             });
             
-            // Initialize voice speech load
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.getVoices();
                 window.speechSynthesis.onvoiceschanged = () => {
@@ -1043,26 +1278,41 @@
             }
         });
 
-        // Initialize defaults in localStorage if empty
-        function initializeData() {
+        // Initialize defaults in localStorage or load from Supabase
+        async function initializeData() {
+            // Ensure local storage defaults are initialized as fallback
             if (!localStorage.getItem('antrian_clinic')) {
                 localStorage.setItem('antrian_clinic', JSON.stringify(DEFAULT_CLINIC));
             }
             if (!localStorage.getItem('antrian_counters')) {
                 localStorage.setItem('antrian_counters', JSON.stringify(DEFAULT_COUNTERS));
             }
-            if (!localStorage.getItem('antrian_queues')) {
-                localStorage.setItem('antrian_queues', JSON.stringify([]));
-            }
             if (!localStorage.getItem('antrian_products')) {
                 localStorage.setItem('antrian_products', JSON.stringify(DEFAULT_PRODUCTS));
             }
-            if (!localStorage.getItem('antrian_transactions')) {
-                localStorage.setItem('antrian_transactions', JSON.stringify([]));
+            
+            initSupabase();
+
+            if (isSupabaseConnected) {
+                await Promise.all([
+                    loadClinicInfoFromSupabase(),
+                    loadCountersFromSupabase(),
+                    loadProductsFromSupabase(),
+                    loadQueuesFromSupabase(),
+                    loadTransactionsFromSupabase()
+                ]);
+            } else {
+                clinicInfo = JSON.parse(localStorage.getItem('antrian_clinic')) || DEFAULT_CLINIC;
+                counters = JSON.parse(localStorage.getItem('antrian_counters')) || DEFAULT_COUNTERS;
+                queues = JSON.parse(localStorage.getItem('antrian_queues')) || [];
+                products = JSON.parse(localStorage.getItem('antrian_products')) || DEFAULT_PRODUCTS;
+                transactions = JSON.parse(localStorage.getItem('antrian_transactions')) || [];
             }
             
+            opSelectedCounter = localStorage.getItem('antrian_op_counter') || counters[0] || 'Loket 1';
             updateCounterOptions();
             updateUI();
+            updateSupabaseStatusUI();
         }
 
         // --- CORE NAVIGATION & VIEWS ---
@@ -1286,46 +1536,121 @@
         }
 
         // Operator triggers calling
-        function callNextQueue(category) {
+        // Operator triggers calling
+        async function callNextQueue(category) {
             // Selesai-kan antrean aktif sebelumnya di loket ini jika ada dan arahkan ke kasir
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (activeCall) {
-                activeCall.status = 'waiting_payment';
+                if (isSupabaseConnected) {
+                    await supabase.from('queues').update({ status: 'waiting_payment' }).eq('id', activeCall.id);
+                } else {
+                    activeCall.status = 'waiting_payment';
+                }
             }
 
             // Ambil nomor antrean waiting tertua untuk kategori terpilih
             const target = queues.find(q => q.category === category && q.status === 'waiting');
-            if (!target) return;
+            if (!target) {
+                // If we finished the previous one, reload list
+                if (isSupabaseConnected && activeCall) {
+                    await loadQueuesFromSupabase();
+                } else if (!isSupabaseConnected && activeCall) {
+                    saveQueues();
+                }
+                updateUI();
+                return;
+            }
 
-            target.status = 'calling';
-            target.counter = opSelectedCounter;
-            target.calledAt = new Date().toISOString();
+            if (isSupabaseConnected) {
+                const { error } = await supabase
+                    .from('queues')
+                    .update({ 
+                        status: 'calling', 
+                        counter: opSelectedCounter, 
+                        called_at: new Date().toISOString() 
+                    })
+                    .eq('id', target.id);
+                    
+                if (error) {
+                    alert('Gagal memperbarui antrean di server: ' + error.message);
+                    return;
+                }
+                
+                await loadQueuesFromSupabase();
+            } else {
+                target.status = 'calling';
+                target.counter = opSelectedCounter;
+                target.calledAt = new Date().toISOString();
 
-            saveQueues();
-            
-            // Broadcast event to notify monitor screen
-            triggerCallNotification(target);
+                saveQueues();
+                
+                // Broadcast event to notify monitor screen (local fallback)
+                triggerCallNotification(target);
+            }
             
             updateUI();
         }
 
-        function recallActiveCall() {
+        async function recallActiveCall() {
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (!activeCall) return;
 
-            activeCall.status = 'calling'; // set to calling state to pulse UI
-            saveQueues();
+            if (isSupabaseConnected) {
+                // Touch called_at to trigger realtime event update on queues table
+                const { error } = await supabase
+                    .from('queues')
+                    .update({ 
+                        status: 'calling', 
+                        called_at: new Date().toISOString() 
+                    })
+                    .eq('id', activeCall.id);
+                    
+                if (error) {
+                    alert('Gagal panggil ulang di server: ' + error.message);
+                    return;
+                }
+                
+                await loadQueuesFromSupabase();
+            } else {
+                activeCall.status = 'calling'; // set to calling state to pulse UI
+                saveQueues();
 
-            triggerCallNotification(activeCall);
+                triggerCallNotification(activeCall);
+            }
+            
+            // Also play voice locally on operator tab if checked
+            const isVoiceEnabled = document.getElementById('voice-enable-toggle').checked;
+            if (isVoiceEnabled) {
+                const voiceTarget = isSupabaseConnected ? queues.find(q => q.id === activeCall.id) : activeCall;
+                if (voiceTarget) {
+                    const text = `Nomor antrean, ${voiceTarget.prefix}, ${voiceTarget.number}, silakan menuju ke, ${voiceTarget.counter}`;
+                    speakAnnouncement(text);
+                }
+            }
+
             updateUI();
         }
 
-        function completeActiveCall() {
+        async function completeActiveCall() {
             const activeCall = queues.find(q => q.counter === opSelectedCounter && (q.status === 'calling' || q.status === 'called'));
             if (!activeCall) return;
 
-            activeCall.status = 'waiting_payment';
-            saveQueues();
+            if (isSupabaseConnected) {
+                const { error } = await supabase
+                    .from('queues')
+                    .update({ status: 'waiting_payment' })
+                    .eq('id', activeCall.id);
+                    
+                if (error) {
+                    alert('Gagal menyelesaikan panggilan: ' + error.message);
+                    return;
+                }
+                
+                await loadQueuesFromSupabase();
+            } else {
+                activeCall.status = 'waiting_payment';
+                saveQueues();
+            }
             updateUI();
         }
 
@@ -1576,7 +1901,7 @@
         }
 
         // --- KIOSK TICKET ISSUING & PRINT ENGINE ---
-        function issueTicket(category) {
+        async function issueTicket(category) {
             // Calculate prefix and number
             const prefix = category === 'UMUM' ? 'A' : 'B';
             const catQueues = queues.filter(q => q.category === category);
@@ -1586,20 +1911,46 @@
             
             // Create queue item
             const newItem = {
-                id: new Date().getTime(),
                 category: category,
                 prefix: prefix,
                 number: nextNumber,
                 formattedNumber: formattedNumber,
                 status: 'waiting',
-                createdAt: new Date().toISOString(),
                 calledAt: null,
                 counter: null
             };
 
-            // Save to DB
-            queues.push(newItem);
-            saveQueues();
+            if (isSupabaseConnected) {
+                const { data, error } = await supabase
+                    .from('queues')
+                    .insert({
+                        category: newItem.category,
+                        prefix: newItem.prefix,
+                        number: newItem.number,
+                        formatted_number: newItem.formattedNumber,
+                        status: newItem.status
+                    })
+                    .select()
+                    .single();
+                
+                if (error) {
+                    alert('Gagal menyambung ke server Supabase: ' + error.message);
+                    return;
+                }
+                
+                newItem.id = data.id;
+                newItem.createdAt = data.created_at;
+                
+                // Fetch fresh list
+                await loadQueuesFromSupabase();
+            } else {
+                newItem.id = new Date().getTime();
+                newItem.createdAt = new Date().toISOString();
+                
+                queues.push(newItem);
+                saveQueues();
+            }
+
             updateUI();
 
             // Calculate waiting size in front of this ticket
@@ -1651,7 +2002,7 @@
         }
 
         // --- SETTINGS VIEW ACTIONS ---
-        function saveClinicInfo() {
+        async function saveClinicInfo() {
             const nameInput = document.getElementById('settings-clinic-name').value.trim();
             const addressInput = document.getElementById('settings-clinic-address').value.trim();
             const footerInput = document.getElementById('settings-clinic-footer').value.trim();
@@ -1667,7 +2018,16 @@
                 footer: footerInput
             };
 
-            localStorage.setItem('antrian_clinic', JSON.stringify(clinicInfo));
+            if (isSupabaseConnected) {
+                const { error } = await supabase.from('clinic_info').update(clinicInfo).eq('id', 1);
+                if (error) {
+                    alert('Gagal memperbarui informasi klinik di cloud: ' + error.message);
+                    return;
+                }
+                await loadClinicInfoFromSupabase();
+            } else {
+                localStorage.setItem('antrian_clinic', JSON.stringify(clinicInfo));
+            }
             updateUI();
             alert('Informasi klinik berhasil diperbarui.');
         }
@@ -1777,7 +2137,7 @@
             });
         }
 
-        function addCounter() {
+        async function addCounter() {
             const input = document.getElementById('new-counter-name');
             const val = input.value.trim();
             if (!val) return;
@@ -1787,8 +2147,17 @@
                 return;
             }
 
-            counters.push(val);
-            localStorage.setItem('antrian_counters', JSON.stringify(counters));
+            if (isSupabaseConnected) {
+                const { error } = await supabase.from('counters').insert({ name: val });
+                if (error) {
+                    alert('Gagal menambah loket di cloud: ' + error.message);
+                    return;
+                }
+                await loadCountersFromSupabase();
+            } else {
+                counters.push(val);
+                localStorage.setItem('antrian_counters', JSON.stringify(counters));
+            }
             input.value = '';
             
             updateCounterOptions();
@@ -1796,14 +2165,24 @@
             updateUI();
         }
 
-        function removeCounter(index) {
+        async function removeCounter(index) {
             if (counters.length <= 1) {
                 alert('Minimal harus menyisakan 1 loket aktif!');
                 return;
             }
-            if (confirm(`Apakah Anda yakin ingin menghapus loket "${counters[index]}"?`)) {
-                counters.splice(index, 1);
-                localStorage.setItem('antrian_counters', JSON.stringify(counters));
+            const name = counters[index];
+            if (confirm(`Apakah Anda yakin ingin menghapus loket "${name}"?`)) {
+                if (isSupabaseConnected) {
+                    const { error } = await supabase.from('counters').delete().eq('name', name);
+                    if (error) {
+                        alert('Gagal menghapus loket di cloud: ' + error.message);
+                        return;
+                    }
+                    await loadCountersFromSupabase();
+                } else {
+                    counters.splice(index, 1);
+                    localStorage.setItem('antrian_counters', JSON.stringify(counters));
+                }
                 
                 // Adjust selected operator counter if current deleted
                 if (!counters.includes(opSelectedCounter)) {
@@ -1818,14 +2197,31 @@
         }
 
         // Reset database
-        function confirmReset() {
+        async function confirmReset() {
             if (confirm('PERINGATAN! Anda akan menghapus seluruh data antrean dan riwayat transaksi saat ini. Lanjutkan?')) {
-                queues = [];
-                transactions = [];
+                if (isSupabaseConnected) {
+                    const { error: err1 } = await supabase.from('transaction_items').delete().neq('id', 0);
+                    const { error: err2 } = await supabase.from('transactions').delete().neq('id', '0');
+                    const { error: err3 } = await supabase.from('queues').delete().neq('id', 0);
+                    
+                    if (err1 || err2 || err3) {
+                        alert('Gagal melakukan reset data di server Supabase: ' + (err1?.message || err2?.message || err3?.message));
+                        return;
+                    }
+                    
+                    await Promise.all([
+                        loadQueuesFromSupabase(),
+                        loadTransactionsFromSupabase()
+                    ]);
+                } else {
+                    queues = [];
+                    transactions = [];
+                    saveQueues();
+                    localStorage.setItem('antrian_transactions', JSON.stringify([]));
+                }
+                
                 activeBillingPatient = null;
                 billingItems = [];
-                saveQueues();
-                localStorage.setItem('antrian_transactions', JSON.stringify([]));
                 updateUI();
                 if (currentView === 'cashier') renderCashierWorkspace();
                 alert('Seluruh data antrean dan transaksi berhasil di-reset.');
@@ -1833,104 +2229,230 @@
         }
 
         // Mock database generation for visual simulation demo
-        function generateMockData() {
+        async function generateMockData() {
             queues = [];
             transactions = [];
             const categories = ['UMUM', 'BPJS'];
             const prefixes = { 'UMUM': 'A', 'BPJS': 'B' };
             const timeOffset = new Date().getTime();
 
-            // Generate some mock history (completed)
-            for (let i = 1; i <= 8; i++) {
-                const cat = categories[Math.floor(Math.random() * 2)];
-                const pref = prefixes[cat];
-                const activeNum = queues.filter(q => q.category === cat).length + 1;
-                const queueId = timeOffset - (20 - i) * 60000;
-                const ticketNumber = `${pref}-${String(activeNum).padStart(3, '0')}`;
-                
-                queues.push({
-                    id: queueId,
-                    category: cat,
-                    prefix: pref,
-                    number: activeNum,
-                    formattedNumber: ticketNumber,
-                    status: 'completed',
-                    createdAt: new Date(timeOffset - (20 - i) * 60000).toISOString(),
-                    calledAt: new Date(timeOffset - (18 - i) * 60000).toISOString(),
-                    counter: counters[Math.floor(Math.random() * counters.length)],
-                    paidAt: new Date(timeOffset - (16 - i) * 60000).toISOString()
+            if (isSupabaseConnected) {
+                // Clear existing tables first
+                const { error: clearErr1 } = await supabase.from('transaction_items').delete().neq('id', 0);
+                const { error: clearErr2 } = await supabase.from('transactions').delete().neq('id', '0');
+                const { error: clearErr3 } = await supabase.from('queues').delete().neq('id', 0);
+
+                if (clearErr1 || clearErr2 || clearErr3) {
+                    alert('Gagal membersihkan data lama di server: ' + (clearErr1?.message || clearErr2?.message || clearErr3?.message));
+                    return;
+                }
+
+                const dbQueues = [];
+                const dbTransactions = [];
+                const dbTxItems = [];
+
+                // 1. Generate completed queues
+                for (let i = 1; i <= 8; i++) {
+                    const cat = categories[Math.floor(Math.random() * 2)];
+                    const pref = prefixes[cat];
+                    const activeNum = dbQueues.filter(q => q.category === cat).length + 1;
+                    const ticketNumber = `${pref}-${String(activeNum).padStart(3, '0')}`;
+                    
+                    dbQueues.push({
+                        category: cat,
+                        prefix: pref,
+                        number: activeNum,
+                        formatted_number: ticketNumber,
+                        status: 'completed',
+                        created_at: new Date(timeOffset - (20 - i) * 60000).toISOString(),
+                        called_at: new Date(timeOffset - (18 - i) * 60000).toISOString(),
+                        paid_at: new Date(timeOffset - (16 - i) * 60000).toISOString(),
+                        counter: counters[Math.floor(Math.random() * counters.length)]
+                    });
+                }
+
+                const { data: insertedQueues, error: qErr } = await supabase.from('queues').insert(dbQueues).select();
+                if (qErr) {
+                    alert('Gagal membuat data antrean simulasi di server: ' + qErr.message);
+                    return;
+                }
+
+                // Generate matching transactions for completed queues
+                for (let i = 0; i < insertedQueues.length; i++) {
+                    const q = insertedQueues[i];
+                    const randMethod = ['Tunai', 'QRIS', 'Kartu Debit'][Math.floor(Math.random() * 3)];
+                    const subtotal = 60000; // Konsultasi 50000 + Obat 10000
+                    const discount = Math.random() > 0.5 ? 5000 : 0;
+                    const tax = Math.round((subtotal - discount) * 0.11);
+                    const total = subtotal - discount + tax;
+
+                    const txId = 'TX-' + (q.id + 1000);
+                    dbTransactions.push({
+                        id: txId,
+                        queue_id: q.id,
+                        ticket_number: q.formatted_number,
+                        patient_category: q.category,
+                        subtotal: subtotal,
+                        discount: discount,
+                        tax: tax,
+                        total: total,
+                        payment_method: randMethod,
+                        amount_paid: randMethod === 'Tunai' ? Math.ceil(total / 50000) * 50000 : total,
+                        change: randMethod === 'Tunai' ? (Math.ceil(total / 50000) * 50000) - total : 0,
+                        created_at: q.paid_at
+                    });
+
+                    dbTxItems.push(
+                        { transaction_id: txId, product_id: 1, name: "Konsultasi Dokter Umum", price: 50000, qty: 1 },
+                        { transaction_id: txId, product_id: 3, name: "Obat Parasetamol 500mg (Strip)", price: 10000, qty: 1 }
+                    );
+                }
+
+                const { error: txErr } = await supabase.from('transactions').insert(dbTransactions);
+                const { error: itemsErr } = await supabase.from('transaction_items').insert(dbTxItems);
+
+                if (txErr || itemsErr) {
+                    console.error('Error inserting mock transactions:', txErr || itemsErr);
+                }
+
+                // 2. Generate active queues (waiting_payment or called)
+                const activeQueues = [];
+                counters.forEach((cnt, idx) => {
+                    const cat = idx % 2 === 0 ? 'UMUM' : 'BPJS';
+                    const pref = prefixes[cat];
+                    // Count total Category queues to determine next number
+                    const nextNum = dbQueues.filter(q => q.category === cat).length + activeQueues.filter(q => q.category === cat).length + 1;
+                    activeQueues.push({
+                        category: cat,
+                        prefix: pref,
+                        number: nextNum,
+                        formatted_number: `${pref}-${String(nextNum).padStart(3, '0')}`,
+                        status: idx === 0 ? 'waiting_payment' : 'called',
+                        created_at: new Date(timeOffset - (10 - idx) * 60000).toISOString(),
+                        called_at: new Date(timeOffset - (3 - idx) * 60000).toISOString(),
+                        counter: cnt
+                    });
                 });
 
-                // Generate a corresponding mock transaction
-                const randMethod = ['Tunai', 'QRIS', 'Kartu Debit'][Math.floor(Math.random() * 3)];
-                const txItems = [
-                    { id: 1, name: "Konsultasi Dokter Umum", price: 50000, qty: 1 },
-                    { id: 3, name: "Obat Parasetamol 500mg (Strip)", price: 10000, qty: Math.floor(Math.random() * 2) + 1 }
-                ];
-                const subtotal = txItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
-                const discount = Math.random() > 0.5 ? 5000 : 0;
-                const tax = Math.round((subtotal - discount) * 0.11);
-                const total = subtotal - discount + tax;
+                // 3. Generate waiting queues
+                const waitingQueues = [];
+                for (let i = 1; i <= 6; i++) {
+                    const cat = i % 2 === 0 ? 'UMUM' : 'BPJS';
+                    const pref = prefixes[cat];
+                    const nextNum = dbQueues.filter(q => q.category === cat).length + activeQueues.filter(q => q.category === cat).length + waitingQueues.filter(q => q.category === cat).length + 1;
+                    waitingQueues.push({
+                        category: cat,
+                        prefix: pref,
+                        number: nextNum,
+                        formatted_number: `${pref}-${String(nextNum).padStart(3, '0')}`,
+                        status: 'waiting',
+                        created_at: new Date(timeOffset + i * 10000).toISOString()
+                    });
+                }
 
-                transactions.push({
-                    id: 'TX-' + (queueId + 1000),
-                    queueId: queueId,
-                    ticketNumber: ticketNumber,
-                    patientCategory: cat,
-                    items: txItems,
-                    subtotal: subtotal,
-                    discount: discount,
-                    tax: tax,
-                    total: total,
-                    paymentMethod: randMethod,
-                    amountPaid: randMethod === 'Tunai' ? Math.ceil(total / 50000) * 50000 : total,
-                    change: randMethod === 'Tunai' ? (Math.ceil(total / 50000) * 50000) - total : 0,
-                    createdAt: new Date(timeOffset - (16 - i) * 60000).toISOString()
+                const { error: actErr } = await supabase.from('queues').insert([...activeQueues, ...waitingQueues]);
+                if (actErr) {
+                    console.error('Error inserting active/waiting mock queues:', actErr);
+                }
+
+                await Promise.all([
+                    loadQueuesFromSupabase(),
+                    loadTransactionsFromSupabase()
+                ]);
+            } else {
+                // Generate some mock history (completed)
+                for (let i = 1; i <= 8; i++) {
+                    const cat = categories[Math.floor(Math.random() * 2)];
+                    const pref = prefixes[cat];
+                    const activeNum = queues.filter(q => q.category === cat).length + 1;
+                    const queueId = timeOffset - (20 - i) * 60000;
+                    const ticketNumber = `${pref}-${String(activeNum).padStart(3, '0')}`;
+                    
+                    queues.push({
+                        id: queueId,
+                        category: cat,
+                        prefix: pref,
+                        number: activeNum,
+                        formattedNumber: ticketNumber,
+                        status: 'completed',
+                        createdAt: new Date(timeOffset - (20 - i) * 60000).toISOString(),
+                        calledAt: new Date(timeOffset - (18 - i) * 60000).toISOString(),
+                        counter: counters[Math.floor(Math.random() * counters.length)],
+                        paidAt: new Date(timeOffset - (16 - i) * 60000).toISOString()
+                    });
+
+                    // Generate a corresponding mock transaction
+                    const randMethod = ['Tunai', 'QRIS', 'Kartu Debit'][Math.floor(Math.random() * 3)];
+                    const txItems = [
+                        { id: 1, name: "Konsultasi Dokter Umum", price: 50000, qty: 1 },
+                        { id: 3, name: "Obat Parasetamol 500mg (Strip)", price: 10000, qty: Math.floor(Math.random() * 2) + 1 }
+                    ];
+                    const subtotal = txItems.reduce((acc, item) => acc + (item.price * item.qty), 0);
+                    const discount = Math.random() > 0.5 ? 5000 : 0;
+                    const tax = Math.round((subtotal - discount) * 0.11);
+                    const total = subtotal - discount + tax;
+
+                    transactions.push({
+                        id: 'TX-' + (queueId + 1000),
+                        queueId: queueId,
+                        ticketNumber: ticketNumber,
+                        patientCategory: cat,
+                        items: txItems,
+                        subtotal: subtotal,
+                        discount: discount,
+                        tax: tax,
+                        total: total,
+                        paymentMethod: randMethod,
+                        amountPaid: randMethod === 'Tunai' ? Math.ceil(total / 50000) * 50000 : total,
+                        change: randMethod === 'Tunai' ? (Math.ceil(total / 50000) * 50000) - total : 0,
+                        createdAt: new Date(timeOffset - (16 - i) * 60000).toISOString()
+                    });
+                }
+
+                // Generate active called or waiting_payment statuses
+                counters.forEach((cnt, idx) => {
+                    const cat = idx % 2 === 0 ? 'UMUM' : 'BPJS';
+                    const pref = prefixes[cat];
+                    const activeNum = queues.filter(q => q.category === cat).length + 1;
+                    const status = idx === 0 ? 'waiting_payment' : 'called'; // First one is waiting in cashier
+
+                    queues.push({
+                        id: timeOffset - (3 - idx) * 60000,
+                        category: cat,
+                        prefix: pref,
+                        number: activeNum,
+                        formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
+                        status: status,
+                        createdAt: new Date(timeOffset - (10 - idx) * 60000).toISOString(),
+                        calledAt: new Date(timeOffset - (3 - idx) * 60000).toISOString(),
+                        counter: cnt
+                    });
                 });
+
+                // Generate waiting queues (in line)
+                for (let i = 1; i <= 6; i++) {
+                    const cat = i % 2 === 0 ? 'UMUM' : 'BPJS';
+                    const pref = prefixes[cat];
+                    const activeNum = queues.filter(q => q.category === cat).length + 1;
+
+                    queues.push({
+                        id: timeOffset + i * 10000,
+                        category: cat,
+                        prefix: pref,
+                        number: activeNum,
+                        formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
+                        status: 'waiting',
+                        createdAt: new Date(timeOffset + i * 10000).toISOString(),
+                        calledAt: null,
+                        counter: null
+                    });
+                }
+
+                saveQueues();
+                localStorage.setItem('antrian_transactions', JSON.stringify(transactions));
+                updateUI();
             }
 
-            // Generate active called or waiting_payment statuses
-            counters.forEach((cnt, idx) => {
-                const cat = idx % 2 === 0 ? 'UMUM' : 'BPJS';
-                const pref = prefixes[cat];
-                const activeNum = queues.filter(q => q.category === cat).length + 1;
-                const status = idx === 0 ? 'waiting_payment' : 'called'; // First one is waiting in cashier
-
-                queues.push({
-                    id: timeOffset - (3 - idx) * 60000,
-                    category: cat,
-                    prefix: pref,
-                    number: activeNum,
-                    formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
-                    status: status,
-                    createdAt: new Date(timeOffset - (10 - idx) * 60000).toISOString(),
-                    calledAt: new Date(timeOffset - (3 - idx) * 60000).toISOString(),
-                    counter: cnt
-                });
-            });
-
-            // Generate waiting queues (in line)
-            for (let i = 1; i <= 6; i++) {
-                const cat = i % 2 === 0 ? 'UMUM' : 'BPJS';
-                const pref = prefixes[cat];
-                const activeNum = queues.filter(q => q.category === cat).length + 1;
-
-                queues.push({
-                    id: timeOffset + i * 10000,
-                    category: cat,
-                    prefix: pref,
-                    number: activeNum,
-                    formattedNumber: `${pref}-${String(activeNum).padStart(3, '0')}`,
-                    status: 'waiting',
-                    createdAt: new Date(timeOffset + i * 10000).toISOString(),
-                    calledAt: null,
-                    counter: null
-                });
-            }
-
-            saveQueues();
-            localStorage.setItem('antrian_transactions', JSON.stringify(transactions));
-            updateUI();
             if (currentView === 'cashier') renderCashierWorkspace();
             alert('Berhasil menghasilkan data simulasi antrean dan transaksi kasir.');
         }
@@ -2231,7 +2753,7 @@
             }
         }
 
-        function processPayment() {
+        async function processPayment() {
             if (!activeBillingPatient) return;
             if (billingItems.length === 0) {
                 alert('Item tagihan tidak boleh kosong!');
@@ -2273,16 +2795,64 @@
                 createdAt: new Date().toISOString()
             };
 
-            // Save transaction
-            transactions.push(newTx);
-            localStorage.setItem('antrian_transactions', JSON.stringify(transactions));
+            if (isSupabaseConnected) {
+                // 1. Insert transaction row
+                const { error: txError } = await supabase.from('transactions').insert({
+                    id: newTx.id,
+                    queue_id: newTx.queueId,
+                    ticket_number: newTx.ticketNumber,
+                    patient_category: newTx.patientCategory,
+                    subtotal: newTx.subtotal,
+                    discount: newTx.discount,
+                    tax: newTx.tax,
+                    total: newTx.total,
+                    payment_method: newTx.paymentMethod,
+                    amount_paid: newTx.amountPaid,
+                    change: newTx.change,
+                    created_at: newTx.createdAt
+                });
 
-            // Mark queue item status as completed
-            const qIdx = queues.findIndex(q => q.id === activeBillingPatient.id);
-            if (qIdx !== -1) {
-                queues[qIdx].status = 'completed';
-                queues[qIdx].paidAt = new Date().toISOString();
-                saveQueues();
+                if (txError) {
+                    alert('Gagal menyimpan transaksi ke server: ' + txError.message);
+                    return;
+                }
+
+                // 2. Insert transaction items
+                const dbItems = newTx.items.map(item => ({
+                    transaction_id: newTx.id,
+                    product_id: item.id > 1000000000000 ? null : item.id, // ignore custom timestamp id in fk
+                    name: item.name,
+                    price: item.price,
+                    qty: item.qty
+                }));
+
+                const { error: itemsError } = await supabase.from('transaction_items').insert(dbItems);
+                if (itemsError) {
+                    console.error('Error inserting transaction items:', itemsError);
+                }
+
+                // 3. Update queue status
+                await supabase.from('queues').update({ 
+                    status: 'completed',
+                    paid_at: new Date().toISOString()
+                }).eq('id', activeBillingPatient.id);
+                
+                // Fetch recent updates
+                await Promise.all([
+                    loadQueuesFromSupabase(),
+                    loadTransactionsFromSupabase()
+                ]);
+            } else {
+                // LocalStorage fallback
+                transactions.push(newTx);
+                localStorage.setItem('antrian_transactions', JSON.stringify(transactions));
+
+                const qIdx = queues.findIndex(q => q.id === activeBillingPatient.id);
+                if (qIdx !== -1) {
+                    queues[qIdx].status = 'completed';
+                    queues[qIdx].paidAt = new Date().toISOString();
+                    saveQueues();
+                }
             }
 
             // Print Receipt
@@ -2447,7 +3017,7 @@
             });
         }
 
-        function addNewProduct() {
+        async function addNewProduct() {
             const nameInput = document.getElementById('settings-new-product-name');
             const priceInput = document.getElementById('settings-new-product-price');
             const name = nameInput.value.trim();
@@ -2458,9 +3028,18 @@
                 return;
             }
 
-            const id = new Date().getTime();
-            products.push({ id, name, price });
-            localStorage.setItem('antrian_products', JSON.stringify(products));
+            if (isSupabaseConnected) {
+                const { error } = await supabase.from('products').insert({ name, price });
+                if (error) {
+                    alert('Gagal menambah produk ke cloud: ' + error.message);
+                    return;
+                }
+                await loadProductsFromSupabase();
+            } else {
+                const id = new Date().getTime();
+                products.push({ id, name, price });
+                localStorage.setItem('antrian_products', JSON.stringify(products));
+            }
             
             nameInput.value = '';
             priceInput.value = '';
@@ -2470,10 +3049,20 @@
         }
 
         // Hapus produk katalog
-        function removeProduct(index) {
-            if (confirm(`Apakah Anda yakin ingin menghapus "${products[index].name}" dari katalog?`)) {
-                products.splice(index, 1);
-                localStorage.setItem('antrian_products', JSON.stringify(products));
+        async function removeProduct(index) {
+            const prod = products[index];
+            if (confirm(`Apakah Anda yakin ingin menghapus "${prod.name}" dari katalog?`)) {
+                if (isSupabaseConnected) {
+                    const { error } = await supabase.from('products').delete().eq('id', prod.id);
+                    if (error) {
+                        alert('Gagal menghapus produk di cloud: ' + error.message);
+                        return;
+                    }
+                    await loadProductsFromSupabase();
+                } else {
+                    products.splice(index, 1);
+                    localStorage.setItem('antrian_products', JSON.stringify(products));
+                }
                 renderProductsSettings();
                 if (currentView === 'cashier') renderCashierWorkspace();
             }
